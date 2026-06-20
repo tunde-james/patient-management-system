@@ -1,0 +1,3 @@
+package com.devtunde.patientservice.exception;
+
+public record FieldErrorDetail(String field, String message) {}

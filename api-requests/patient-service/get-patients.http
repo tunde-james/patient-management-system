@@ -1,0 +1,5 @@
+### GET request to get all patients
+
+@baseUrl = http://localhost:4000/api/v1
+
+GET {{baseUrl}}/patients

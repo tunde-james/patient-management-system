@@ -1,0 +1,11 @@
+### PUT request to update an existing patient
+@baseUrl = http://localhost:4000/api/v1
+
+PUT {{baseUrl}}/patients/123e4567-e89b-12d3-a456-426614174000
+Content-Type: application/json
+
+{
+  "name": "Jon Doe",
+  "email": "test2@example.com",
+  "address": "123 Spring Boot Ave"
+}
