@@ -15,10 +15,10 @@ HELP.md
 # Build artifacts (will be rebuilt inside Docker)
 target
 
-# Maven wrapper (not needed in final image)
-.mvn
-mvnw
-mvnw.cmd
+# # Maven wrapper (not needed in final image)
+# .mvn
+# mvnw
+# mvnw.cmd
 
 # OS files
 .DS_Store
