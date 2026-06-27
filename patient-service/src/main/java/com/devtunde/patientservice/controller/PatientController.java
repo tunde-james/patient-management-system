@@ -23,9 +23,12 @@ import com.devtunde.patientservice.dto.PatientReqDto;
 import com.devtunde.patientservice.dto.PatientResDto;
 import com.devtunde.patientservice.dto.PatientUpdateReqDto;
 import com.devtunde.patientservice.service.PatientService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/v1/patients")
+@Tag(name = "patient", description = "API for managing Patients")
 public class PatientController {
 
     private final PatientService patientService;
@@ -35,6 +38,7 @@ public class PatientController {
     }
 
     @GetMapping
+    @Operation(summary = "Get Patients")
     public ResponseEntity<List<PatientResDto>> getPatients() {
 
         List<PatientResDto> patients = patientService.getPatients();
@@ -43,6 +47,7 @@ public class PatientController {
     }
 
     @PostMapping
+    @Operation(summary = "Create Patient")
     public ResponseEntity<PatientResDto> createPatient(@Valid @RequestBody PatientReqDto patientReqDto) {
 
         PatientResDto patientResDto = patientService.createPatient(patientReqDto);
@@ -53,6 +58,7 @@ public class PatientController {
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Update Patient")
     public ResponseEntity<PatientResDto> updatePatient(
             @PathVariable UUID id, @Valid @RequestBody PatientUpdateReqDto patientUpdateReqDto) {
 
@@ -60,6 +66,7 @@ public class PatientController {
     }
 
     @PatchMapping("/{id}/date-of-birth")
+    @Operation(summary = "Update Patient's Date of Birth")
     public ResponseEntity<PatientResDto> updatePatientDob(
             @PathVariable UUID id, @Valid @RequestBody PatientDobUpdateReqDto patientDobUpdateReqDto) {
 
@@ -67,6 +74,7 @@ public class PatientController {
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Delete Patient")
     public ResponseEntity<Void> deletePatient(@PathVariable UUID id) {
 
         patientService.deletePatient(id);
