@@ -1,0 +1,9 @@
+### PATCH request to create an existing patient date of birth
+@baseUrl = http://localhost:4000/api/v1
+
+PATCH {{baseUrl}}/patients/123e4567-e89b-12d3-a456-426614174000/date-of-birth
+Content-Type: application/json
+
+{
+  "dateOfBirth": "17-06-1985"
+}

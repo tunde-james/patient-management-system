@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: patient-service
+  output:
+    ansi:
+      enabled: ALWAYS
+
+server:
+  port: 4000
+
+logging:
+  level:
+    root: INFO

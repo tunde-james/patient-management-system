@@ -1,0 +1,13 @@
+### POST request to create a patient
+@baseUrl = http://localhost:4000/api/v1
+
+POST {{baseUrl}}/patients
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "address": "123 Spring Boot Ave",
+  "dateOfBirth": "15-08-1995",
+  "registeredDate": "19-06-2026"
+}
