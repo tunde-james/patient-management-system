@@ -1,0 +1,25 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.iml
+
+# Documentation
+README.md
+HELP.md
+
+# Build artifacts (will be rebuilt inside Docker)
+target
+
+# # Maven wrapper (not needed in final image)
+# .mvn
+# mvnw
+# mvnw.cmd
+
+# OS files
+.DS_Store
+Thumbs.db
