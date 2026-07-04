@@ -5,9 +5,9 @@ POST {{baseUrl}}/patients
 Content-Type: application/json
 
 {
-  "name": "John Doe",
-  "email": "john@example.com",
-  "address": "123 Spring Boot Ave",
-  "dateOfBirth": "15-08-1995",
-  "registeredDate": "19-06-2026"
+  "name": "Mark Doe",
+  "email": "mark@example.com",
+  "address": "123 Java Boot Ave",
+  "dateOfBirth": "15-08-1980",
+  "registeredDate": "04-07-2026"
 }

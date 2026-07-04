@@ -31,6 +31,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${PATIENT_SERVICE_DB_PASSWORD}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_SQL_INIT_MODE: always
+      BILLING_SERVICE_ADDRESS: billing-service
     ports:
       - "4000:4000"
     networks:
