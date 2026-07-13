@@ -1,9 +1,14 @@
 package com.devtunde.patientservice.dto;
 
+import java.time.LocalDate;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Size;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 public record PatientReqDto(
         @NotBlank(message = "Name is required")
@@ -20,10 +25,11 @@ public record PatientReqDto(
         @Size(min = 5, max = 255, message = "Address must be between 5 and 255 characters")
         String address,
 
-        @NotBlank(message = "Date of birth is required")
-        @Pattern(regexp = "^\\d{2}-\\d{2}-\\d{4}$", message = "Date must be in the format DD-MM-YYYY")
-        String dateOfBirth,
+        @NotNull(message = "Date of birth is required")
+        @Past(message = "Date of birth must be in the past")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+        LocalDate dateOfBirth,
 
-        @NotBlank(message = "Registered date is required")
-        @Pattern(regexp = "^\\d{2}-\\d{2}-\\d{4}$", message = "Date must be in the format DD-MM-YYYY")
-        String registeredDate) {}
+        @NotNull(message = "Registered date is required")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+        LocalDate registeredDate) {}
