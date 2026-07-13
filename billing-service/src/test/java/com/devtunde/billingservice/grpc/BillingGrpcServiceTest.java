@@ -54,10 +54,12 @@ class BillingGrpcServiceTest {
                 .build();
 
         List<BillingResponse> captured = new ArrayList<>();
-        StreamObserver<BillingResponse> observer = capturingObserver(captured);
+        TestStreamObserver observer = capturingObserver(captured);
 
         grpcService.createBillingAccount(request, observer);
 
+        assertThat(observer.completed).as("onCompleted must be called").isTrue();
+        assertThat(observer.error).as("onError must not be called").isNull();
         assertThat(captured).hasSize(1);
         BillingResponse response = captured.get(0);
         assertThat(response.getAccountId()).isEqualTo("AAAAAAAAAA");
@@ -97,10 +99,12 @@ class BillingGrpcServiceTest {
                 .build();
 
         List<BillingResponse> captured = new ArrayList<>();
-        StreamObserver<BillingResponse> observer = capturingObserver(captured);
+        TestStreamObserver observer = capturingObserver(captured);
 
         grpcService.createBillingAccount(request, observer);
 
+        assertThat(observer.completed).as("onCompleted must be called").isTrue();
+        assertThat(observer.error).as("onError must not be called").isNull();
         assertThat(captured).hasSize(1);
         BillingResponse response = captured.get(0);
         assertThat(response.getAccountId()).isEqualTo("BBBBBBBBBB");
@@ -140,10 +144,12 @@ class BillingGrpcServiceTest {
                 .build();
 
         List<BillingResponse> captured = new ArrayList<>();
-        StreamObserver<BillingResponse> observer = capturingObserver(captured);
+        TestStreamObserver observer = capturingObserver(captured);
 
         grpcService.createBillingAccount(request, observer);
 
+        assertThat(observer.completed).as("onCompleted must be called").isTrue();
+        assertThat(observer.error).as("onError must not be called").isNull();
         assertThat(captured).hasSize(1);
         BillingResponse response = captured.get(0);
         assertThat(response.getAccountId()).isEqualTo("CCCCCCCCCC");
@@ -151,22 +157,33 @@ class BillingGrpcServiceTest {
         assertThat(response.getCreated()).isTrue();
     }
 
-    private static StreamObserver<BillingResponse> capturingObserver(List<BillingResponse> sink) {
-        return new StreamObserver<>() {
-            @Override
-            public void onNext(BillingResponse value) {
-                sink.add(value);
-            }
+    private static TestStreamObserver capturingObserver(List<BillingResponse> sink) {
+        TestStreamObserver observer = new TestStreamObserver(sink);
+        return observer;
+    }
 
-            @Override
-            public void onError(Throwable t) {
-                throw new AssertionError("observer.onError should not be called", t);
-            }
+    static final class TestStreamObserver implements StreamObserver<BillingResponse> {
+        private final List<BillingResponse> sink;
+        boolean completed;
+        Throwable error;
 
-            @Override
-            public void onCompleted() {
-                // no-op; assertions read from `sink`
-            }
-        };
+        TestStreamObserver(List<BillingResponse> sink) {
+            this.sink = sink;
+        }
+
+        @Override
+        public void onNext(BillingResponse value) {
+            sink.add(value);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            this.error = t;
+        }
+
+        @Override
+        public void onCompleted() {
+            this.completed = true;
+        }
     }
 }

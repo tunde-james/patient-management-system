@@ -24,7 +24,7 @@ public class BillingGrpcService extends BillingServiceImplBase {
     public void createBillingAccount(
             billing.BillingRequest billingRequest, StreamObserver<BillingResponse> responseObserver) {
 
-        log.info("createBillingAccount request received {}", billingRequest);
+        log.info("createBillingAccount request received {}", billingRequest.getPatientId());
 
         BillingService.ProvisioningResult result = billingService.provision(
                 billingRequest.getPatientId(), billingRequest.getName(), billingRequest.getEmail());

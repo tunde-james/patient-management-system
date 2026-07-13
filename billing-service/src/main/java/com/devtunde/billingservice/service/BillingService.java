@@ -49,6 +49,11 @@ public class BillingService {
 
             return new ProvisioningResult(true, saved);
         } catch (DataIntegrityViolationException e) {
+            Optional<BillingAccount> existingAfterCollision = billingAccountRepository.findByPatientId(patientId);
+            if (existingAfterCollision.isPresent()) {
+                return new ProvisioningResult(false, existingAfterCollision.get());
+            }
+            
             BillingAccount retried = buildNewAccount(patientId, name, email, accountIdGenerator.generate());
             BillingAccount saved = billingAccountSaver.save(retried);
 
