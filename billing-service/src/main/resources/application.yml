@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: billing-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5001/billing_service_db}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+server:
+  port: 4001
+grpc:
+  server:
+    port: 9001
+    reflection-service-enabled: true
+logging:
+  level:
+    root: INFO
+billing:
+  account:
+    default-credit-limit: "0.00"

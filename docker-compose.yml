@@ -18,6 +18,26 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  billing-service-db:
+    image: postgres:latest
+    container_name: billing-service-db
+    environment:
+      POSTGRES_USER: ${BILLING_SERVICE_DB_USER}
+      POSTGRES_PASSWORD: ${BILLING_SERVICE_DB_PASSWORD}
+      POSTGRES_DB: ${BILLING_SERVICE_DB_NAME}
+    ports:
+      - "5001:5432"
+    volumes:
+      - billing-service-db-data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${BILLING_SERVICE_DB_USER} -d ${BILLING_SERVICE_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
   
   patient-service:
     build:
@@ -31,12 +51,33 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${PATIENT_SERVICE_DB_PASSWORD}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_SQL_INIT_MODE: always
+      BILLING_SERVICE_ADDRESS: billing-service
     ports:
       - "4000:4000"
     networks:
       - internal
     depends_on:
       patient-service-db:
+        condition: service_healthy
+  
+  billing-service:
+    build:
+      context: ./billing-service
+      dockerfile: Dockerfile
+    image: billing-service:latest
+    container_name: billing-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://billing-service-db:5432/${BILLING_SERVICE_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${BILLING_SERVICE_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${BILLING_SERVICE_DB_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "4001:4001"
+      - "9001:9001"
+    networks:
+      - internal
+    depends_on:
+      billing-service-db:
         condition: service_healthy
     
 volumes:

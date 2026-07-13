@@ -14,7 +14,6 @@ public class ApiProblemDetails {
 
     private ApiProblemDetails() {}
 
-    @SuppressWarnings("null")
     public static ResponseEntity<ProblemDetail> response(HttpStatus status, ProblemDetail problemDetail) {
 
         return ResponseEntity.status(status)
@@ -22,7 +21,6 @@ public class ApiProblemDetails {
                 .body(problemDetail);
     }
 
-    @SuppressWarnings("null")
     public static ProblemDetail validationError(String instance, List<FieldErrorDetail> errors) {
 
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
@@ -36,7 +34,6 @@ public class ApiProblemDetails {
         return problemDetail;
     }
 
-    @SuppressWarnings("null")
     public static ProblemDetail conflict(String instance, String type, String title, String detail) {
 
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
@@ -49,7 +46,6 @@ public class ApiProblemDetails {
         return problemDetail;
     }
 
-    @SuppressWarnings("null")
     public static ProblemDetail notFound(String instance, String type, String title, String detail) {
 
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
@@ -62,7 +58,6 @@ public class ApiProblemDetails {
         return problemDetail;
     }
 
-    @SuppressWarnings("null")
     public static ProblemDetail badRequest(String instance, String type, String title, String detail) {
 
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
@@ -75,7 +70,6 @@ public class ApiProblemDetails {
         return problemDetail;
     }
 
-    @SuppressWarnings("null")
     public static ProblemDetail unauthorized(String uri, String errorCode, String title, String detail) {
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, detail);

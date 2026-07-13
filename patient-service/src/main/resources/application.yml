@@ -11,3 +11,8 @@ server:
 logging:
   level:
     root: INFO
+
+billing:
+  service:
+    address: localhost
+    grpc-port: 9001

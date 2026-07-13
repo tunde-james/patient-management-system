@@ -12,6 +12,7 @@ import com.devtunde.patientservice.dto.PatientResDto;
 import com.devtunde.patientservice.dto.PatientUpdateReqDto;
 import com.devtunde.patientservice.exception.EmailAlreadyExistsException;
 import com.devtunde.patientservice.exception.PatientNotFoundException;
+import com.devtunde.patientservice.grpc.BillingServiceGrpcClient;
 import com.devtunde.patientservice.mapper.PatientMapper;
 import com.devtunde.patientservice.model.Patient;
 import com.devtunde.patientservice.repository.PatientRepository;
@@ -20,9 +21,11 @@ import com.devtunde.patientservice.repository.PatientRepository;
 public class PatientService {
 
     private final PatientRepository patientRepository;
+    private final BillingServiceGrpcClient billingServiceGrpcClient;
 
-    public PatientService(PatientRepository patientRepository) {
+    public PatientService(PatientRepository patientRepository, BillingServiceGrpcClient billingServiceGrpcClient) {
         this.patientRepository = patientRepository;
+        this.billingServiceGrpcClient = billingServiceGrpcClient;
     }
 
     public List<PatientResDto> getPatients() {
@@ -42,6 +45,9 @@ public class PatientService {
         }
 
         Patient newPatient = patientRepository.save(PatientMapper.toModel(patientReqDto));
+
+        billingServiceGrpcClient.createBillingAccount(
+                newPatient.getId().toString(), newPatient.getName(), newPatient.getEmail());
 
         return PatientMapper.toDTO(newPatient);
     }
