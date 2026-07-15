@@ -16,6 +16,14 @@ public class BillingProvisioningException extends RuntimeException {
         this.statusCode = statusCode;
     }
 
+    public static BillingProvisioningException unavailable(String message) {
+        return new BillingProvisioningException(Status.Code.UNAVAILABLE, message);
+    }
+
+    public static BillingProvisioningException deadlineExceeded(String message) {
+        return new BillingProvisioningException(Status.Code.DEADLINE_EXCEEDED, message);
+    }
+
     public Status.Code getStatusCode() {
         return statusCode;
     }

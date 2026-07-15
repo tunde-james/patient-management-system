@@ -30,7 +30,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import billing.BillingResponse;
 import com.devtunde.patientservice.exception.BillingProvisioningException;
 import com.devtunde.patientservice.grpc.BillingServiceGrpcClient;
-import io.grpc.Status;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
@@ -63,9 +62,9 @@ class PatientControllerIntegrationTest {
         stubBillingSuccess(accountId, created);
     }
 
-    private void overrideBillingFailure(Status.Code code) {
+    private void overrideBillingFailure(BillingProvisioningException failure) {
         Mockito.reset(billingServiceGrpcClient);
-        stubBillingFailure(code);
+        stubBillingFailure(failure);
     }
 
     private void stubBillingSuccess(String accountId, boolean created) {
@@ -78,10 +77,10 @@ class PatientControllerIntegrationTest {
                         .build());
     }
 
-    private void stubBillingFailure(Status.Code code) {
+    private void stubBillingFailure(BillingProvisioningException failure) {
         Mockito.when(billingServiceGrpcClient.createBillingAccount(
                         ArgumentMatchers.anyString(), ArgumentMatchers.anyString(), ArgumentMatchers.anyString()))
-                .thenThrow(new BillingProvisioningException(code, "billing failure (test)"));
+                .thenThrow(failure);
     }
 
     private static Map<String, Object> createBody(String email) {
@@ -137,7 +136,7 @@ class PatientControllerIntegrationTest {
     @DisplayName("POST /api/v1/patients when billing is UNAVAILABLE returns 201 with billingStatus=FAILED")
     void createPatient_billingUnavailable_returns201Failed() {
 
-        overrideBillingFailure(Status.Code.UNAVAILABLE);
+        overrideBillingFailure(BillingProvisioningException.unavailable("billing failure (test)"));
 
         String email = "down-" + UUID.randomUUID() + "@example.com";
 
@@ -156,7 +155,7 @@ class PatientControllerIntegrationTest {
     @DisplayName("POST /api/v1/patients when billing exceeds the deadline returns 201 with billingStatus=FAILED")
     void createPatient_billingDeadlineExceeded_returns201Failed() {
 
-        overrideBillingFailure(Status.Code.DEADLINE_EXCEEDED);
+        overrideBillingFailure(BillingProvisioningException.deadlineExceeded("billing failure (test)"));
 
         String email = "slow-" + UUID.randomUUID() + "@example.com";
 
