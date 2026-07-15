@@ -4,6 +4,8 @@ import java.time.LocalDate;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -36,6 +38,13 @@ public class Patient extends BaseEntity {
 
     @NotNull(message = "Registered date is required")
     private LocalDate registeredDate;
+
+    @Column(name = "billing_account_id", length = 10)
+    private String billingAccountId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "billing_status", nullable = false, length = 12)
+    private BillingProvisioningStatus billingStatus = BillingProvisioningStatus.PENDING;
 
     public String getName() {
         return name;
@@ -75,5 +84,21 @@ public class Patient extends BaseEntity {
 
     public void setRegisteredDate(LocalDate registeredDate) {
         this.registeredDate = registeredDate;
+    }
+
+    public String getBillingAccountId() {
+        return billingAccountId;
+    }
+
+    public void setBillingAccountId(String billingAccountId) {
+        this.billingAccountId = billingAccountId;
+    }
+
+    public BillingProvisioningStatus getBillingStatus() {
+        return billingStatus;
+    }
+
+    public void setBillingStatus(BillingProvisioningStatus billingStatus) {
+        this.billingStatus = billingStatus;
     }
 }
