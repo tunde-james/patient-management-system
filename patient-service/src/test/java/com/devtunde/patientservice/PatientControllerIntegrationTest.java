@@ -28,7 +28,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import billing.BillingResponse;
+import com.devtunde.patientservice.exception.BillingProvisioningException;
 import com.devtunde.patientservice.grpc.BillingServiceGrpcClient;
+import io.grpc.Status;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
@@ -46,21 +48,40 @@ class PatientControllerIntegrationTest {
     private BillingServiceGrpcClient billingServiceGrpcClient;
 
     @BeforeEach
-    void stubBillingClient() {
-
-        Mockito.when(billingServiceGrpcClient.createBillingAccount(
-                        ArgumentMatchers.anyString(), ArgumentMatchers.anyString(), ArgumentMatchers.anyString()))
-                .thenReturn(BillingResponse.newBuilder()
-                        .setAccountId("AAAAAAAAAA")
-                        .setStatus("ACTIVE")
-                        .setCreated(true)
-                        .build());
+    void stubBillingClientHappyPath() {
+        stubBillingSuccess("AAAAAAAAAA", true);
     }
 
     private static HttpHeaders jsonHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         return headers;
+    }
+
+    private void overrideBillingSuccess(String accountId, boolean created) {
+        Mockito.reset(billingServiceGrpcClient);
+        stubBillingSuccess(accountId, created);
+    }
+
+    private void overrideBillingFailure(Status.Code code) {
+        Mockito.reset(billingServiceGrpcClient);
+        stubBillingFailure(code);
+    }
+
+    private void stubBillingSuccess(String accountId, boolean created) {
+        Mockito.when(billingServiceGrpcClient.createBillingAccount(
+                        ArgumentMatchers.anyString(), ArgumentMatchers.anyString(), ArgumentMatchers.anyString()))
+                .thenReturn(BillingResponse.newBuilder()
+                        .setAccountId(accountId)
+                        .setStatus("ACTIVE")
+                        .setCreated(created)
+                        .build());
+    }
+
+    private void stubBillingFailure(Status.Code code) {
+        Mockito.when(billingServiceGrpcClient.createBillingAccount(
+                        ArgumentMatchers.anyString(), ArgumentMatchers.anyString(), ArgumentMatchers.anyString()))
+                .thenThrow(new BillingProvisioningException(code, "billing failure (test)"));
     }
 
     private static Map<String, Object> createBody(String email) {
@@ -73,8 +94,8 @@ class PatientControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/patients creates a patient and returns 201 with the right fields")
-    void createPatient_returnsCreatedWithCorrectFields() {
+    @DisplayName("POST /api/v1/patients creates a patient, provisions billing, and returns 201")
+    void createPatient_returnsCreatedWithCorrectFields_andProvisionedBilling() {
 
         String email = "ada-" + UUID.randomUUID() + "@example.com";
 
@@ -88,8 +109,65 @@ class PatientControllerIntegrationTest {
         assertThat(body.get("email")).isEqualTo(email); // <-- catches the swap bug
         assertThat(body.get("address")).isEqualTo("12 Marina Road, Lagos");
         assertThat(body.get("dateOfBirth")).isEqualTo("1990-06-01");
+        assertThat(body.get("billingAccountId")).isEqualTo("AAAAAAAAAA");
+        assertThat(body.get("billingStatus")).isEqualTo("PROVISIONED");
         assertThat(body.get("id")).asString().isNotEmpty();
         assertThat(response.getHeaders().getLocation()).asString().startsWith("/api/v1/patient/");
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/patients on an idempotent billing hit still returns 201 with PROVISIONED")
+    void createPatient_idempotentBillingHit_stillProvisioned() {
+
+        overrideBillingSuccess("BBBBBBBBBB", false);
+
+        String email = "idem-" + UUID.randomUUID() + "@example.com";
+
+        ResponseEntity<Map> response = restTemplate.postForEntity(
+                "/api/v1/patients", new HttpEntity<>(createBody(email), jsonHeaders()), Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        Map<String, Object> body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.get("billingAccountId")).isEqualTo("BBBBBBBBBB");
+        assertThat(body.get("billingStatus")).isEqualTo("PROVISIONED");
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/patients when billing is UNAVAILABLE returns 201 with billingStatus=FAILED")
+    void createPatient_billingUnavailable_returns201Failed() {
+
+        overrideBillingFailure(Status.Code.UNAVAILABLE);
+
+        String email = "down-" + UUID.randomUUID() + "@example.com";
+
+        ResponseEntity<Map> response = restTemplate.postForEntity(
+                "/api/v1/patients", new HttpEntity<>(createBody(email), jsonHeaders()), Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        Map<String, Object> body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.get("billingStatus")).isEqualTo("FAILED");
+        assertThat(body.get("billingAccountId")).isNull();
+        assertThat(body.get("id")).asString().isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/patients when billing exceeds the deadline returns 201 with billingStatus=FAILED")
+    void createPatient_billingDeadlineExceeded_returns201Failed() {
+
+        overrideBillingFailure(Status.Code.DEADLINE_EXCEEDED);
+
+        String email = "slow-" + UUID.randomUUID() + "@example.com";
+
+        ResponseEntity<Map> response = restTemplate.postForEntity(
+                "/api/v1/patients", new HttpEntity<>(createBody(email), jsonHeaders()), Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        Map<String, Object> body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.get("billingStatus")).isEqualTo("FAILED");
+        assertThat(body.get("billingAccountId")).isNull();
     }
 
     @Test
