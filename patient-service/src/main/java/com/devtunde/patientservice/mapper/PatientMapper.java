@@ -1,7 +1,5 @@
 package com.devtunde.patientservice.mapper;
 
-import java.time.LocalDate;
-
 import com.devtunde.patientservice.dto.PatientDobUpdateReqDto;
 import com.devtunde.patientservice.dto.PatientReqDto;
 import com.devtunde.patientservice.dto.PatientResDto;
@@ -17,7 +15,11 @@ public class PatientMapper {
                 patient.getName(),
                 patient.getEmail(),
                 patient.getAddress(),
-                patient.getDateOfBirth());
+                patient.getDateOfBirth(),
+                patient.getBillingAccountId(),
+                patient.getBillingStatus() == null
+                        ? null
+                        : patient.getBillingStatus().name());
     }
 
     public static Patient toModel(PatientReqDto patientReqDto) {

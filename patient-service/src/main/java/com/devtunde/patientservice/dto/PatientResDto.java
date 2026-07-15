@@ -11,4 +11,7 @@ public record PatientResDto(
         String address,
 
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
-        LocalDate dateOfBirth) {}
+        LocalDate dateOfBirth,
+
+        String billingAccountId,
+        String billingStatus) {}

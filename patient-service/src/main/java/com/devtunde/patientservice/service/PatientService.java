@@ -6,19 +6,26 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.devtunde.patientservice.dto.PatientDobUpdateReqDto;
 import com.devtunde.patientservice.dto.PatientReqDto;
 import com.devtunde.patientservice.dto.PatientResDto;
 import com.devtunde.patientservice.dto.PatientUpdateReqDto;
+import com.devtunde.patientservice.exception.BillingProvisioningException;
 import com.devtunde.patientservice.exception.EmailAlreadyExistsException;
 import com.devtunde.patientservice.exception.PatientNotFoundException;
 import com.devtunde.patientservice.grpc.BillingServiceGrpcClient;
 import com.devtunde.patientservice.mapper.PatientMapper;
+import com.devtunde.patientservice.model.BillingProvisioningStatus;
 import com.devtunde.patientservice.model.Patient;
 import com.devtunde.patientservice.repository.PatientRepository;
 
 @Service
 public class PatientService {
+
+    private static final Logger log = LoggerFactory.getLogger(PatientService.class);
 
     private final PatientRepository patientRepository;
     private final BillingServiceGrpcClient billingServiceGrpcClient;
@@ -46,8 +53,23 @@ public class PatientService {
 
         Patient newPatient = patientRepository.save(PatientMapper.toModel(patientReqDto));
 
-        billingServiceGrpcClient.createBillingAccount(
-                newPatient.getId().toString(), newPatient.getName(), newPatient.getEmail());
+        try {
+            billing.BillingResponse response = billingServiceGrpcClient.createBillingAccount(
+                    newPatient.getId().toString(), newPatient.getName(), newPatient.getEmail());
+
+            newPatient.setBillingAccountId(response.getAccountId());
+            newPatient.setBillingStatus(BillingProvisioningStatus.PROVISIONED);
+        } catch (BillingProvisioningException ex) {
+            log.warn(
+                    "Billing provisioning failed for patient {}: gRPC status={}",
+                    newPatient.getId(),
+                    ex.getStatusCode());
+
+            newPatient.setBillingAccountId(null);
+            newPatient.setBillingStatus(BillingProvisioningStatus.FAILED);
+        }
+
+        patientRepository.save(newPatient);
 
         return PatientMapper.toDTO(newPatient);
     }
