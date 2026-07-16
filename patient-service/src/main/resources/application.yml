@@ -4,6 +4,9 @@ spring:
   output:
     ansi:
       enabled: ALWAYS
+  jpa:
+    hibernate:
+      ddl-auto: update
 
 server:
   port: 4000
@@ -12,7 +15,13 @@ logging:
   level:
     root: INFO
 
+grpc:
+  server:
+    port: -1
+
 billing:
   service:
     address: localhost
     grpc-port: 9001
+    use-plaintext: true
+    deadline-seconds: 3

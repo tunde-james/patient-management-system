@@ -1,8 +1,5 @@
 package com.devtunde.patientservice.mapper;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-
 import com.devtunde.patientservice.dto.PatientDobUpdateReqDto;
 import com.devtunde.patientservice.dto.PatientReqDto;
 import com.devtunde.patientservice.dto.PatientResDto;
@@ -11,16 +8,18 @@ import com.devtunde.patientservice.model.Patient;
 
 public class PatientMapper {
 
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-
     public static PatientResDto toDTO(Patient patient) {
 
         return new PatientResDto(
                 patient.getId().toString(),
                 patient.getName(),
-                patient.getAddress(),
                 patient.getEmail(),
-                patient.getDateOfBirth().toString());
+                patient.getAddress(),
+                patient.getDateOfBirth(),
+                patient.getBillingAccountId(),
+                patient.getBillingStatus() == null
+                        ? null
+                        : patient.getBillingStatus().name());
     }
 
     public static Patient toModel(PatientReqDto patientReqDto) {
@@ -29,8 +28,8 @@ public class PatientMapper {
         patient.setName(patientReqDto.name());
         patient.setEmail(patientReqDto.email());
         patient.setAddress(patientReqDto.address());
-        patient.setDateOfBirth(LocalDate.parse(patientReqDto.dateOfBirth(), FORMATTER));
-        patient.setRegisteredDate(LocalDate.parse(patientReqDto.registeredDate(), FORMATTER));
+        patient.setDateOfBirth(patientReqDto.dateOfBirth());
+        patient.setRegisteredDate(patientReqDto.registeredDate());
 
         return patient;
     }
@@ -46,7 +45,7 @@ public class PatientMapper {
 
     public static Patient updateDob(Patient existingPatient, PatientDobUpdateReqDto patientDobUpdateReqDto) {
 
-        existingPatient.setDateOfBirth(LocalDate.parse(patientDobUpdateReqDto.dateOfBirth(), FORMATTER));
+        existingPatient.setDateOfBirth(patientDobUpdateReqDto.dateOfBirth());
 
         return existingPatient;
     }

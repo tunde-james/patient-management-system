@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -56,5 +57,45 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(), "patient-not-found", "Patient not found", ex.getMessage());
 
         return ApiProblemDetails.response(HttpStatus.NOT_FOUND, problemDetail);
+    }
+
+    @ExceptionHandler(InvalidFormatException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidFormatException(
+            InvalidFormatException ex, HttpServletRequest request) {
+
+        log.warn("Invalid format {}", ex.getMessage());
+
+        ProblemDetail problemDetail = ApiProblemDetails.badRequest(
+                request.getRequestURI(), "invalid-format", "Invalid format", ex.getMessage());
+
+        return ApiProblemDetails.response(HttpStatus.BAD_REQUEST, problemDetail);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ProblemDetail> handleUnreadable(
+            HttpMessageNotReadableException ex, HttpServletRequest request) {
+
+        Throwable cause = ex.getCause();
+        if (cause instanceof com.fasterxml.jackson.databind.exc.InvalidFormatException jacksonIfe
+                && jacksonIfe.getTargetType() != null
+                && java.time.temporal.TemporalAccessor.class.isAssignableFrom(jacksonIfe.getTargetType())
+                && jacksonIfe.getPath() != null
+                && !jacksonIfe.getPath().isEmpty()) {
+
+            String fieldName = jacksonIfe.getPath().get(0).getFieldName();
+            InvalidFormatException domainEx = new InvalidFormatException("Date field '" + fieldName
+                    + "' must use ISO 8601 (yyyy-MM-dd). Rejected value: " + jacksonIfe.getValue());
+            return handleInvalidFormatException(domainEx, request);
+        }
+
+        log.warn("Malformed request body {}", ex.getMessage());
+
+        ProblemDetail problemDetail = ApiProblemDetails.badRequest(
+                request.getRequestURI(),
+                "malformed-body",
+                "Malformed request body",
+                "The request body could not be parsed. Check that all date fields use ISO 8601 (yyyy-MM-dd).");
+
+        return ApiProblemDetails.response(HttpStatus.BAD_REQUEST, problemDetail);
     }
 }

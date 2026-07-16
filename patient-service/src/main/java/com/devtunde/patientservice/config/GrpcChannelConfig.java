@@ -17,10 +17,18 @@ public class GrpcChannelConfig {
     @Bean
     public ManagedChannel billingServiceChannel(BillingServiceConfig config) {
 
-        log.info("Creating ManagedChannel for Billing service at {}:{}", config.address(), config.grpcPort());
+        log.info(
+                "Creating ManagedChannel for Billing service at {}:{} (usePlaintext={})",
+                config.address(),
+                config.grpcPort(),
+                config.usePlaintext());
 
-        return ManagedChannelBuilder.forAddress(config.address(), config.grpcPort())
-                .usePlaintext()
-                .build();
+        ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forAddress(config.address(), config.grpcPort());
+
+        if (config.usePlaintext()) {
+            builder.usePlaintext();
+        }
+
+        return builder.build();
     }
 }
