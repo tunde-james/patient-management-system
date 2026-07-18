@@ -7,6 +7,14 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+  kafka:
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+
+kafka:     
+  topics:
+    patient-event: patient.events        
 
 server:
   port: 4000
