@@ -1,6 +1,6 @@
 services:
   patient-service-db:
-    image: postgres:latest
+    image: postgres:17
     container_name: patient-service-db
     environment:
       POSTGRES_USER: ${PATIENT_SERVICE_DB_USER}
@@ -20,7 +20,7 @@ services:
       start_period: 30s
 
   billing-service-db:
-    image: postgres:latest
+    image: postgres:17
     container_name: billing-service-db
     environment:
       POSTGRES_USER: ${BILLING_SERVICE_DB_USER}
