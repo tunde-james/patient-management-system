@@ -1,6 +1,7 @@
 package com.devtunde.patientservice.model;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -45,6 +46,12 @@ public class Patient extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "billing_status", nullable = false, length = 12)
     private BillingProvisioningStatus billingStatus = BillingProvisioningStatus.PENDING;
+
+    @Column(name = "billing_attempt_count", nullable = false, columnDefinition = "integer not null default 0")
+    private int billingAttemptCount = 0;
+
+    @Column(name = "billing_last_attempt_at")
+    private LocalDateTime billingLastAttemptAt;
 
     public String getName() {
         return name;
@@ -100,5 +107,21 @@ public class Patient extends BaseEntity {
 
     public void setBillingStatus(BillingProvisioningStatus billingStatus) {
         this.billingStatus = billingStatus;
+    }
+
+    public int getBillingAttemptCount() {
+        return billingAttemptCount;
+    }
+
+    public void setBillingAttemptCount(int billingAttemptCount) {
+        this.billingAttemptCount = billingAttemptCount;
+    }
+
+    public LocalDateTime getBillingLastAttemptAt() {
+        return billingLastAttemptAt;
+    }
+
+    public void setBillingLastAttemptAt(LocalDateTime billingLastAttemptAt) {
+        this.billingLastAttemptAt = billingLastAttemptAt;
     }
 }
