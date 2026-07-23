@@ -88,8 +88,6 @@ class BillingReconciliationServiceTest {
                 .thenThrow(BillingProvisioningException.unavailable("billing unavailable (test)"));
     }
 
-    // ?? PENDING path ???????????????????????????????????????????????????????????
-
     @Nested
     @DisplayName("PENDING rows")
     class PendingRows {
@@ -107,6 +105,7 @@ class BillingReconciliationServiceTest {
             assertThat(p.getBillingAccountId()).isEqualTo(ACCOUNT_ID);
             assertThat(p.getBillingAttemptCount()).isZero();
             assertThat(p.getBillingLastAttemptAt()).isNull();
+
             verify(patientRepository, times(1)).save(p);
         }
 
@@ -123,11 +122,10 @@ class BillingReconciliationServiceTest {
             assertThat(p.getBillingAccountId()).isNull();
             assertThat(p.getBillingAttemptCount()).isEqualTo(1);
             assertThat(p.getBillingLastAttemptAt()).isNotNull();
+
             verify(patientRepository, times(1)).save(p);
         }
     }
-
-    // ?? FAILED path: backoff + budget ??????????????????????????????????????????
 
     @Nested
     @DisplayName("FAILED rows")
@@ -141,7 +139,6 @@ class BillingReconciliationServiceTest {
 
             boolean stillCandidate = service.reconcile(p);
 
-            // No retry attempt, no save ? the row is left untouched in the DB.
             assertThat(stillCandidate).isFalse();
             verify(billingServiceGrpcClient, never()).createBillingAccount(anyString(), anyString(), anyString());
             verify(patientRepository, never()).save(any());
@@ -150,17 +147,16 @@ class BillingReconciliationServiceTest {
         @Test
         @DisplayName("FAILED row still inside its backoff window is skipped this round (still a candidate)")
         void failedRow_insideBackoffWindow_isSkipped() {
-            // attemptCount=1 ? next attempt allowed 1 minute after last attempt.
-            // lastAttemptAt = 30 seconds ago ? next allowed in 30 more seconds ? skip now.
+    
             Patient p = failedPatient(1, LocalDateTime.now().minusSeconds(30));
             mockBillingSuccess();
 
             boolean stillCandidate = service.reconcile(p);
 
             assertThat(stillCandidate).isTrue();
-            // The patient's state must NOT change ? no attempt was made.
             assertThat(p.getBillingStatus()).isEqualTo(BillingProvisioningStatus.FAILED);
             assertThat(p.getBillingAttemptCount()).isEqualTo(1);
+
             verify(billingServiceGrpcClient, never()).createBillingAccount(anyString(), anyString(), anyString());
             verify(patientRepository, never()).save(any());
         }
@@ -168,7 +164,7 @@ class BillingReconciliationServiceTest {
         @Test
         @DisplayName("FAILED row whose backoff has elapsed IS retried; on success, audit counters reset")
         void failedRow_backoffElapsed_isRetriedAndSucceeds() {
-            // attemptCount=1 ? 1 minute backoff; last attempt was 5 minutes ago ? due now.
+           
             Patient p = failedPatient(1, LocalDateTime.now().minusMinutes(5));
             mockBillingSuccess();
 
@@ -179,13 +175,14 @@ class BillingReconciliationServiceTest {
             assertThat(p.getBillingAccountId()).isEqualTo(ACCOUNT_ID);
             assertThat(p.getBillingAttemptCount()).isZero();
             assertThat(p.getBillingLastAttemptAt()).isNull();
+
             verify(patientRepository, times(1)).save(p);
         }
 
         @Test
         @DisplayName("FAILED row retried and fails again: attemptCount increments + lastAttemptAt updates")
         void failedRow_retried_andFailsAgain_incrementsAttemptCount() {
-            // attemptCount=2 ? 2-minute backoff; last attempt was 5 minutes ago ? due now.
+            
             Patient p = failedPatient(2, LocalDateTime.now().minusMinutes(5));
             mockBillingFailure();
 
@@ -195,8 +192,8 @@ class BillingReconciliationServiceTest {
             assertThat(stillCandidate).isTrue();
             assertThat(p.getBillingStatus()).isEqualTo(BillingProvisioningStatus.FAILED);
             assertThat(p.getBillingAttemptCount()).isEqualTo(3);
-            // lastAttemptAt should be moved forward to roughly now (>= the original).
             assertThat(p.getBillingLastAttemptAt()).isAfterOrEqualTo(before);
+
             verify(patientRepository, times(1)).save(p);
         }
     }
@@ -211,6 +208,7 @@ class BillingReconciliationServiceTest {
         boolean stillCandidate = service.reconcile(p);
 
         assertThat(stillCandidate).isFalse();
+
         verify(billingServiceGrpcClient, never()).createBillingAccount(anyString(), anyString(), anyString());
         verify(patientRepository, never()).save(any());
     }
@@ -219,7 +217,7 @@ class BillingReconciliationServiceTest {
     @DisplayName("computeNextAttemptAt backoff schedule (ADR-0001: 1m, 2m, 4m, 8m, 16m, cap 30m)")
     class ComputeNextAttemptAtSchedule {
 
-        private LocalDateTime last = LocalDateTime.now().minusHours(1); // long enough ago to be irrelevant
+        private LocalDateTime last = LocalDateTime.now().minusHours(1);
 
         private LocalDateTime compute(int attempts) {
             Patient p = failedPatient(attempts, last);
@@ -230,8 +228,7 @@ class BillingReconciliationServiceTest {
         @Test
         @DisplayName("attemptCount=0: allowed immediately (now or before now) ? never-failed rows skip backoff")
         void zeroAttempts_allowedImmediately() {
-            // n <= 0 returns LocalDateTime.now(); we just assert it's not in the future,
-            // since 'now' constructs may differ by a few ms between the call and assertion.
+            
             LocalDateTime next = compute(0);
             assertThat(next).isBeforeOrEqualTo(LocalDateTime.now().plusSeconds(1));
         }
@@ -239,7 +236,6 @@ class BillingReconciliationServiceTest {
         @Test
         @DisplayName("attemptCount=1: next attempt allowed 1 minute after last attempt (2^0 = 1)")
         void oneAttempt_nextInOneMinute() {
-            // 1L << (1-1) = 1 minute from 'last'
             assertThat(compute(1)).isEqualTo(last.plusMinutes(1));
         }
 
@@ -270,7 +266,6 @@ class BillingReconciliationServiceTest {
         @Test
         @DisplayName("attemptCount=6: CAPPED at 30 minutes (2^5 = 32, but max-backoff=30)")
         void sixAttempts_cappedAtThirtyMinutes() {
-            // baseMinutes * 2^(n-1) = 1 * 32 = 32, but capped at 30.
             assertThat(compute(6)).isEqualTo(last.plusMinutes(30));
         }
 
