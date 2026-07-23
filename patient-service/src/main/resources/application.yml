@@ -33,3 +33,8 @@ billing:
     grpc-port: 9001
     use-plaintext: true
     deadline-seconds: 3
+  reconciliation:
+    run-interval: 60s
+    failed-max-attempts: 5
+    failed-min-backoff: 1m
+    failed-max-backoff: 30m

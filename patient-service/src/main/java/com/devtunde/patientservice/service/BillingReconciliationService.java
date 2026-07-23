@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import billing.BillingResponse;
+import com.devtunde.patientservice.config.BillingReconciliationConfig;
 import com.devtunde.patientservice.exception.BillingProvisioningException;
 import com.devtunde.patientservice.grpc.BillingServiceGrpcClient;
 import com.devtunde.patientservice.model.BillingProvisioningStatus;
@@ -27,11 +28,15 @@ public class BillingReconciliationService {
 
     private final PatientRepository patientRepository;
     private final BillingServiceGrpcClient billingServiceGrpcClient;
+    private final BillingReconciliationConfig config;
 
     public BillingReconciliationService(
-            PatientRepository patientRepository, BillingServiceGrpcClient billingServiceGrpcClient) {
+            PatientRepository patientRepository,
+            BillingServiceGrpcClient billingServiceGrpcClient,
+            BillingReconciliationConfig config) {
         this.patientRepository = patientRepository;
         this.billingServiceGrpcClient = billingServiceGrpcClient;
+        this.config = config;
     }
 
     @Transactional
@@ -42,12 +47,12 @@ public class BillingReconciliationService {
         }
 
         if (patient.getBillingStatus() == BillingProvisioningStatus.FAILED) {
-            if (patient.getBillingAttemptCount() >= FAILED_MAX_ATTEMPTS) {
+            if (patient.getBillingAttemptCount() >= config.failedMaxAttempts()) {
                 log.error(
                         "Reconciler: patient {} exceeded the failed-attempt budget ({}); "
                                 + "permanently FAILED until manual reset",
                         patient.getId(),
-                        FAILED_MAX_ATTEMPTS);
+                        config.failedMaxAttempts());
                 return false;
             }
 
@@ -86,20 +91,22 @@ public class BillingReconciliationService {
                     "Reconciler: billing provisioning failed for patient {} " + "(attempt {}/{}, gRPC status={})",
                     patient.getId(),
                     patient.getBillingAttemptCount(),
-                    FAILED_MAX_ATTEMPTS,
+                    config.failedMaxAttempts(),
                     ex.getStatusCode());
 
             patientRepository.save(patient);
         }
     }
 
-    static LocalDateTime computeNextAttemptAt(Patient patient) {
+     LocalDateTime computeNextAttemptAt(Patient patient) {
         int attemptCount = patient.getBillingAttemptCount();
         if (attemptCount <= 0) {
             return LocalDateTime.now();
         }
 
-        long minutes = Math.min((1L << (attemptCount - 1)), FAILED_MAX_BACKOFF.toMinutes());
+        long baseMinutes = config.failedMinBackoff().toMinutes();
+        long cappedMaxMinutes = config.failedMaxBackoff().toMinutes();
+        long minutes = Math.min(baseMinutes *(1L << (attemptCount - 1)), cappedMaxMinutes);
         return patient.getBillingLastAttemptAt().plusMinutes(minutes);
     }
 }
