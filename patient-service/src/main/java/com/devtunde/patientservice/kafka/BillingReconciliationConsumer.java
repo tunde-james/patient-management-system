@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.devtunde.patientservice.exception.PatientNotFoundException;
 import com.devtunde.patientservice.kafka.event_type.PatientEventType;
 import com.devtunde.patientservice.model.Patient;
 import com.devtunde.patientservice.repository.PatientRepository;
@@ -54,10 +53,15 @@ public class BillingReconciliationConsumer {
             return;
         }
 
-        Patient patient = patientRepository
-                .findById(patientId)
-                .orElseThrow(() -> new PatientNotFoundException(
-                        "Reconciler consumer: patient " + patientId + " not found for billing-failed event"));
+        Patient patient = patientRepository.findById(patientId).orElse(null);
+
+        if (patient == null) {
+            log.warn(
+                    "Reconciler consumer: ignored billing-failed event for patient: {}: "
+                            + "not found or soft-deleted; no retryable action",
+                    patientId);
+            return;
+        }
 
         log.info("Reconciler consumer: received billing-failed event for patient {}", patientId);
 

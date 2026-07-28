@@ -37,11 +37,12 @@ public class KafkaPatientProducer {
                     if (ex == null) {
                         log.info(
                                 "Published PatientCreated event for patient {} to partition {} at offset {}",
+                                eventType,
                                 patient.getId(),
                                 result.getRecordMetadata().partition(),
                                 result.getRecordMetadata().offset());
                     } else {
-                        log.error("Failed to publish PatientCreated event for patient {}", patient.getId(), ex);
+                        log.error("Failed to publish {} event for patient {}", eventType, patient.getId(), ex);
                     }
                 });
     }
