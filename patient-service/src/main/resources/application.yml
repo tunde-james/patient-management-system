@@ -7,6 +7,20 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+  kafka:
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+      auto-offset-reset: earliest
+      properties:
+        enable.auto.commit: false
+
+kafka:     
+  topics:
+    patient-event: patient.events        
 
 server:
   port: 4000
@@ -25,3 +39,8 @@ billing:
     grpc-port: 9001
     use-plaintext: true
     deadline-seconds: 3
+  reconciliation:
+    run-interval: 60s
+    failed-max-attempts: 5
+    failed-min-backoff: 1m
+    failed-max-backoff: 30m

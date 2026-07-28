@@ -17,6 +17,8 @@ import com.devtunde.patientservice.exception.BillingProvisioningException;
 import com.devtunde.patientservice.exception.EmailAlreadyExistsException;
 import com.devtunde.patientservice.exception.PatientNotFoundException;
 import com.devtunde.patientservice.grpc.BillingServiceGrpcClient;
+import com.devtunde.patientservice.kafka.KafkaPatientProducer;
+import com.devtunde.patientservice.kafka.event_type.PatientEventType;
 import com.devtunde.patientservice.mapper.PatientMapper;
 import com.devtunde.patientservice.model.BillingProvisioningStatus;
 import com.devtunde.patientservice.model.Patient;
@@ -29,10 +31,15 @@ public class PatientService {
 
     private final PatientRepository patientRepository;
     private final BillingServiceGrpcClient billingServiceGrpcClient;
+    private final KafkaPatientProducer kafkaPatientProducer;
 
-    public PatientService(PatientRepository patientRepository, BillingServiceGrpcClient billingServiceGrpcClient) {
+    public PatientService(
+            PatientRepository patientRepository,
+            BillingServiceGrpcClient billingServiceGrpcClient,
+            KafkaPatientProducer kafkaPatientProducer) {
         this.patientRepository = patientRepository;
         this.billingServiceGrpcClient = billingServiceGrpcClient;
+        this.kafkaPatientProducer = kafkaPatientProducer;
     }
 
     public List<PatientResDto> getPatients() {
@@ -59,6 +66,8 @@ public class PatientService {
 
             newPatient.setBillingAccountId(response.getAccountId());
             newPatient.setBillingStatus(BillingProvisioningStatus.PROVISIONED);
+
+            kafkaPatientProducer.sendEvent(newPatient, PatientEventType.PATIENT_CREATED.name());
         } catch (BillingProvisioningException ex) {
             log.warn(
                     "Billing provisioning failed for patient {}: gRPC status={}",
@@ -67,6 +76,8 @@ public class PatientService {
 
             newPatient.setBillingAccountId(null);
             newPatient.setBillingStatus(BillingProvisioningStatus.FAILED);
+
+            kafkaPatientProducer.sendEvent(newPatient, PatientEventType.PATIENT_CREATED_BILLING_FAILED.name());
         }
 
         patientRepository.save(newPatient);

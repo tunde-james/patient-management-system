@@ -10,7 +10,9 @@ CREATE TABLE IF NOT EXISTS patient
     created_at      TIMESTAMP           NOT NULL,
     updated_at      TIMESTAMP           NOT NULL,
     is_deleted      BOOLEAN             NOT NULL DEFAULT FALSE,
-    deleted_at      TIMESTAMP
+    deleted_at      TIMESTAMP,
+    billing_account_id VARCHAR(10),
+    billing_status VARCHAR(12) NOT NULL DEFAULT 'PENDING'
 );
 
 -- Insert well-known UUIDs for specific patients
