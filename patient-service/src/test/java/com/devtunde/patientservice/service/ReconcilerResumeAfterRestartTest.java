@@ -32,7 +32,7 @@ import com.devtunde.patientservice.repository.PatientRepository;
 
 @SpringBootTest
 @Testcontainers
-@TestPropertySource(properties = "spring.task.scheduling.enabled=false")
+@TestPropertySource(properties = {"billing.reconciliation.scheduler.enabled=false"})
 public class ReconcilerResumeAfterRestartTest {
 
     private static final String ACCOUNT_ID = "RESUME0001";

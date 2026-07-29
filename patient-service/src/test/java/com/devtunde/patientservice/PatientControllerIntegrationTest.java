@@ -30,6 +30,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import billing.BillingResponse;
 import com.devtunde.patientservice.exception.BillingProvisioningException;
 import com.devtunde.patientservice.grpc.BillingServiceGrpcClient;
+import com.devtunde.patientservice.kafka.KafkaPatientProducer;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
@@ -45,6 +46,9 @@ class PatientControllerIntegrationTest {
 
     @MockitoBean
     private BillingServiceGrpcClient billingServiceGrpcClient;
+
+    @MockitoBean
+    private KafkaPatientProducer kafkaPatientProducer;
 
     @BeforeEach
     void stubBillingClientHappyPath() {

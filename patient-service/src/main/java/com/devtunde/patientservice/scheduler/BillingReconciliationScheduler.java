@@ -2,6 +2,7 @@ package com.devtunde.patientservice.scheduler;
 
 import java.util.List;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +15,11 @@ import com.devtunde.patientservice.repository.PatientRepository;
 import com.devtunde.patientservice.service.BillingReconciliationService;
 
 @Component
+@ConditionalOnProperty(
+        prefix = "billing.reconciliation.scheduler",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class BillingReconciliationScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(BillingReconciliationScheduler.class);
