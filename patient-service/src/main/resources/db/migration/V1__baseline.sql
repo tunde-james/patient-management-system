@@ -305,8 +305,7 @@ INSERT INTO patients (
     is_deleted
   )
 SELECT '223e4567-e89b-12d3-a456-426614174011',
-  'Ethan           
- Martinez',
+  'Ethan Martinez',
   'ethan.martinez@example.com',
   '987 Redwood St, Springfield',
   '1984-05-03',
@@ -381,8 +380,7 @@ INSERT INTO patients (
     is_deleted
   )
 SELECT '223e4567-e89b-12d3-a456-426614174014',
-  'Isabella        
- Walker',
+  'Isabella Walker',
   'isabella.walker@example.com',
   '789 Willow St, Springfield',
   '1987-10-17',
