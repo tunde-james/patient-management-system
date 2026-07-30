@@ -21,9 +21,11 @@ import com.devtunde.patientservice.dto.PatientReqDto;
 import com.devtunde.patientservice.dto.PatientResDto;
 import com.devtunde.patientservice.exception.BillingProvisioningException;
 import com.devtunde.patientservice.grpc.BillingServiceGrpcClient;
+import com.devtunde.patientservice.kafka.KafkaPatientProducer;
 import com.devtunde.patientservice.model.BillingProvisioningStatus;
 import com.devtunde.patientservice.model.Patient;
 import com.devtunde.patientservice.repository.PatientRepository;
+import com.devtunde.patientservice.scheduler.BillingReconciliationScheduler;
 import com.devtunde.patientservice.service.PatientService;
 
 @SpringBootTest
@@ -42,6 +44,12 @@ public class PatientServiceProvisioningInvariantTest {
 
     @MockitoBean
     private BillingServiceGrpcClient billingServiceGrpcClient;
+
+    @MockitoBean
+    private BillingReconciliationScheduler billingReconciliationScheduler;
+
+    @MockitoBean
+    private KafkaPatientProducer kafkaPatientProducer;
 
     private static PatientReqDto aCreateRequest(String email) {
         return new PatientReqDto(

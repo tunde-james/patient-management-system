@@ -15,7 +15,7 @@ import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.SQLRestriction;
 
 @Entity
-@Table(name = "patient")
+@Table(name = "patients")
 @SQLRestriction("is_deleted = false")
 public class Patient extends BaseEntity {
 

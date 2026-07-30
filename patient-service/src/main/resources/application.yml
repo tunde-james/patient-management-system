@@ -6,7 +6,7 @@ spring:
       enabled: ALWAYS
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
   kafka:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
