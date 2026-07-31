@@ -3,6 +3,8 @@ package com.devtunde.patientservice.service;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
+import jakarta.persistence.OptimisticLockException;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -74,13 +76,12 @@ public class BillingReconciliationService {
 
             patient.setBillingAccountId(response.getAccountId());
             patient.setBillingStatus(BillingProvisioningStatus.PROVISIONED);
-
             patient.setBillingAttemptCount(0);
             patient.setBillingLastAttemptAt(null);
 
             log.info("Reconciler: provisioned billing for patient {} (attempts to success: cleared)", patient.getId());
 
-            patientRepository.save(patient);
+            saveOrYield(patient);
         } catch (BillingProvisioningException ex) {
             patient.setBillingAccountId(null);
             patient.setBillingStatus(BillingProvisioningStatus.FAILED);
@@ -94,11 +95,21 @@ public class BillingReconciliationService {
                     config.failedMaxAttempts(),
                     ex.getStatusCode());
 
-            patientRepository.save(patient);
+            saveOrYield(patient);
         }
     }
 
-     LocalDateTime computeNextAttemptAt(Patient patient) {
+    private void saveOrYield(Patient patient) {
+        try {
+            patientRepository.save(patient);
+        } catch (OptimisticLockException ole) {
+            log.warn(
+                    "Reconciler: concurrent reconcile of patient {}; this attempt yields (other writer wins)",
+                    patient.getId());
+        }
+    }
+
+    LocalDateTime computeNextAttemptAt(Patient patient) {
         int attemptCount = patient.getBillingAttemptCount();
         if (attemptCount <= 0) {
             return LocalDateTime.now();
@@ -106,7 +117,7 @@ public class BillingReconciliationService {
 
         long baseMinutes = config.failedMinBackoff().toMinutes();
         long cappedMaxMinutes = config.failedMaxBackoff().toMinutes();
-        long minutes = Math.min(baseMinutes *(1L << (attemptCount - 1)), cappedMaxMinutes);
+        long minutes = Math.min(baseMinutes * (1L << (attemptCount - 1)), cappedMaxMinutes);
         return patient.getBillingLastAttemptAt().plusMinutes(minutes);
     }
 }
