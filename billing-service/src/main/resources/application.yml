@@ -9,6 +9,12 @@ spring:
     hibernate:
       ddl-auto: validate
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
 server:
   port: 4001
 grpc:

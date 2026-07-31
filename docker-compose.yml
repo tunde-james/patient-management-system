@@ -82,6 +82,12 @@ services:
     depends_on:
       patient-service-db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4000/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
   
   billing-service:
     build:
@@ -102,6 +108,12 @@ services:
     depends_on:
       billing-service-db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4001/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     
 volumes:
   patient-service-db-data:

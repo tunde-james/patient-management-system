@@ -18,6 +18,12 @@ spring:
       properties:
         enable.auto.commit: false
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
 kafka:     
   topics:
     patient-event: patient.events        

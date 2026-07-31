@@ -15,6 +15,8 @@ FROM eclipse-temurin:21-jre-alpine
 
 LABEL description="Billing Service - Patient Management Microservice"
 
+RUN apk add --no-cache curl
+
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
