@@ -3,6 +3,7 @@ package com.devtunde.patientservice.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -12,12 +13,15 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import jakarta.persistence.OptimisticLockException;
+
 import org.springframework.test.util.ReflectionTestUtils;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import billing.BillingResponse;
 import com.devtunde.patientservice.config.BillingReconciliationConfig;
@@ -25,12 +29,14 @@ import com.devtunde.patientservice.exception.BillingProvisioningException;
 import com.devtunde.patientservice.grpc.BillingServiceGrpcClient;
 import com.devtunde.patientservice.model.BillingProvisioningStatus;
 import com.devtunde.patientservice.model.Patient;
+import com.devtunde.patientservice.repository.PatientMutationGateway;
 import com.devtunde.patientservice.repository.PatientRepository;
 
 class BillingReconciliationServiceTest {
 
     private PatientRepository patientRepository;
     private BillingServiceGrpcClient billingServiceGrpcClient;
+    private PatientMutationGateway patientMutationGateway;
     private BillingReconciliationService service;
 
     private static final BillingReconciliationConfig CONFIG = new BillingReconciliationConfig(
@@ -43,9 +49,11 @@ class BillingReconciliationServiceTest {
 
     @BeforeEach
     void setUp() {
-        patientRepository = org.mockito.Mockito.mock(PatientRepository.class);
-        billingServiceGrpcClient = org.mockito.Mockito.mock(BillingServiceGrpcClient.class);
-        service = new BillingReconciliationService(patientRepository, billingServiceGrpcClient, CONFIG);
+        patientRepository = Mockito.mock(PatientRepository.class);
+        billingServiceGrpcClient = Mockito.mock(BillingServiceGrpcClient.class);
+        patientMutationGateway = Mockito.mock(PatientMutationGateway.class);
+        service = new BillingReconciliationService(
+                patientRepository, billingServiceGrpcClient, CONFIG, patientMutationGateway);
     }
 
     private Patient pendingPatient() {
@@ -106,7 +114,7 @@ class BillingReconciliationServiceTest {
             assertThat(p.getBillingAttemptCount()).isZero();
             assertThat(p.getBillingLastAttemptAt()).isNull();
 
-            verify(patientRepository, times(1)).save(p);
+            verify(patientMutationGateway, times(1)).save(p);
         }
 
         @Test
@@ -123,7 +131,7 @@ class BillingReconciliationServiceTest {
             assertThat(p.getBillingAttemptCount()).isEqualTo(1);
             assertThat(p.getBillingLastAttemptAt()).isNotNull();
 
-            verify(patientRepository, times(1)).save(p);
+            verify(patientMutationGateway, times(1)).save(p);
         }
     }
 
@@ -141,13 +149,13 @@ class BillingReconciliationServiceTest {
 
             assertThat(stillCandidate).isFalse();
             verify(billingServiceGrpcClient, never()).createBillingAccount(anyString(), anyString(), anyString());
-            verify(patientRepository, never()).save(any());
+            verify(patientMutationGateway, never()).save(any());
         }
 
         @Test
         @DisplayName("FAILED row still inside its backoff window is skipped this round (still a candidate)")
         void failedRow_insideBackoffWindow_isSkipped() {
-    
+
             Patient p = failedPatient(1, LocalDateTime.now().minusSeconds(30));
             mockBillingSuccess();
 
@@ -158,13 +166,13 @@ class BillingReconciliationServiceTest {
             assertThat(p.getBillingAttemptCount()).isEqualTo(1);
 
             verify(billingServiceGrpcClient, never()).createBillingAccount(anyString(), anyString(), anyString());
-            verify(patientRepository, never()).save(any());
+            verify(patientMutationGateway, never()).save(any());
         }
 
         @Test
         @DisplayName("FAILED row whose backoff has elapsed IS retried; on success, audit counters reset")
         void failedRow_backoffElapsed_isRetriedAndSucceeds() {
-           
+
             Patient p = failedPatient(1, LocalDateTime.now().minusMinutes(5));
             mockBillingSuccess();
 
@@ -176,13 +184,13 @@ class BillingReconciliationServiceTest {
             assertThat(p.getBillingAttemptCount()).isZero();
             assertThat(p.getBillingLastAttemptAt()).isNull();
 
-            verify(patientRepository, times(1)).save(p);
+            verify(patientMutationGateway, times(1)).save(p);
         }
 
         @Test
         @DisplayName("FAILED row retried and fails again: attemptCount increments + lastAttemptAt updates")
         void failedRow_retried_andFailsAgain_incrementsAttemptCount() {
-            
+
             Patient p = failedPatient(2, LocalDateTime.now().minusMinutes(5));
             mockBillingFailure();
 
@@ -194,7 +202,61 @@ class BillingReconciliationServiceTest {
             assertThat(p.getBillingAttemptCount()).isEqualTo(3);
             assertThat(p.getBillingLastAttemptAt()).isAfterOrEqualTo(before);
 
-            verify(patientRepository, times(1)).save(p);
+            verify(patientMutationGateway, times(1)).save(p);
+        }
+    }
+
+    @Nested
+    @DisplayName("Optimistic locking (concurrent poller + consumer)")
+    class OptimisticLocking {
+
+        @Test
+        @DisplayName("success-path save throws OptimisticLockException: swallowed, NOT rethrown, no retry save")
+        void successPath_saveThrowsOLE_isSwallowedAndNotRethrown() {
+            Patient p = pendingPatient();
+            mockBillingSuccess();
+            doThrow(new OptimisticLockException("concurrent write (test)"))
+                    .when(patientMutationGateway)
+                    .save(p);
+
+            boolean stillCandidate = service.reconcile(p);
+
+            assertThat(stillCandidate).isFalse();
+            assertThat(p.getBillingStatus()).isEqualTo(BillingProvisioningStatus.PROVISIONED);
+            verify(patientMutationGateway, times(1)).save(p);
+        }
+
+        @Test
+        @DisplayName("failure-path save throws OptimisticLockException: swallowed, NOT rethrown, no retry save")
+        void failurePath_saveThrowsOLE_isSwallowedAndNotRethrown() {
+            Patient p = pendingPatient();
+            mockBillingFailure();
+            doThrow(new OptimisticLockException("concurrent write (test)"))
+                    .when(patientMutationGateway)
+                    .save(p);
+
+            boolean stillCandidate = service.reconcile(p);
+
+            assertThat(stillCandidate).isTrue();
+            assertThat(p.getBillingStatus()).isEqualTo(BillingProvisioningStatus.FAILED);
+            assertThat(p.getBillingAttemptCount()).isEqualTo(1);
+
+            verify(patientMutationGateway, times(1)).save(p);
+        }
+
+        @Test
+        @DisplayName(
+                "gRPC failure itself is unrelated to OLE: still caught as BillingProvisioningException, save still attempted")
+        void grpcFailure_stillRecordedAsFailed_saveAttempted() {
+            Patient p = pendingPatient();
+            mockBillingFailure();
+
+            boolean stillCandidate = service.reconcile(p);
+
+            assertThat(stillCandidate).isTrue();
+            assertThat(p.getBillingStatus()).isEqualTo(BillingProvisioningStatus.FAILED);
+
+            verify(patientMutationGateway, times(1)).save(p);
         }
     }
 
@@ -228,7 +290,7 @@ class BillingReconciliationServiceTest {
         @Test
         @DisplayName("attemptCount=0: allowed immediately (now or before now) ? never-failed rows skip backoff")
         void zeroAttempts_allowedImmediately() {
-            
+
             LocalDateTime next = compute(0);
             assertThat(next).isBeforeOrEqualTo(LocalDateTime.now().plusSeconds(1));
         }
