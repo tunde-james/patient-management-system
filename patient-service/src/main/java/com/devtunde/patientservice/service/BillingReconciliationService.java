@@ -19,26 +19,28 @@ import com.devtunde.patientservice.model.BillingProvisioningStatus;
 import com.devtunde.patientservice.model.Patient;
 import com.devtunde.patientservice.repository.PatientRepository;
 
+import org.springframework.dao.OptimisticLockingFailureException;                                           
+   import com.devtunde.patientservice.repository.PatientMutationGateway;
+
 @Service
 public class BillingReconciliationService {
 
     private static final Logger log = LoggerFactory.getLogger(BillingReconciliationService.class);
 
-    static final int FAILED_MAX_ATTEMPTS = 5;
-    static final Duration FAILED_MIN_BACKOFF = Duration.ofMinutes(1);
-    static final Duration FAILED_MAX_BACKOFF = Duration.ofMinutes(30);
-
     private final PatientRepository patientRepository;
     private final BillingServiceGrpcClient billingServiceGrpcClient;
     private final BillingReconciliationConfig config;
+    private final PatientMutationGateway patientMutationGateway;
 
     public BillingReconciliationService(
             PatientRepository patientRepository,
             BillingServiceGrpcClient billingServiceGrpcClient,
-            BillingReconciliationConfig config) {
+            BillingReconciliationConfig config,
+        PatientMutationGateway patientMutationGateway) {
         this.patientRepository = patientRepository;
         this.billingServiceGrpcClient = billingServiceGrpcClient;
         this.config = config;
+        this.patientMutationGateway = patientMutationGateway;
     }
 
     @Transactional
@@ -101,8 +103,8 @@ public class BillingReconciliationService {
 
     private void saveOrYield(Patient patient) {
         try {
-            patientRepository.save(patient);
-        } catch (OptimisticLockException ole) {
+            patientMutationGateway.save(patient);
+        } catch (OptimisticLockingFailureException |OptimisticLockException ex) {
             log.warn(
                     "Reconciler: concurrent reconcile of patient {}; this attempt yields (other writer wins)",
                     patient.getId());

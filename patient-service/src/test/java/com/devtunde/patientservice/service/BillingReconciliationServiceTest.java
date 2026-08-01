@@ -21,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import billing.BillingResponse;
 import com.devtunde.patientservice.config.BillingReconciliationConfig;
@@ -28,12 +29,14 @@ import com.devtunde.patientservice.exception.BillingProvisioningException;
 import com.devtunde.patientservice.grpc.BillingServiceGrpcClient;
 import com.devtunde.patientservice.model.BillingProvisioningStatus;
 import com.devtunde.patientservice.model.Patient;
+import com.devtunde.patientservice.repository.PatientMutationGateway;
 import com.devtunde.patientservice.repository.PatientRepository;
 
 class BillingReconciliationServiceTest {
 
     private PatientRepository patientRepository;
     private BillingServiceGrpcClient billingServiceGrpcClient;
+    private PatientMutationGateway patientMutationGateway;
     private BillingReconciliationService service;
 
     private static final BillingReconciliationConfig CONFIG = new BillingReconciliationConfig(
@@ -46,9 +49,11 @@ class BillingReconciliationServiceTest {
 
     @BeforeEach
     void setUp() {
-        patientRepository = org.mockito.Mockito.mock(PatientRepository.class);
-        billingServiceGrpcClient = org.mockito.Mockito.mock(BillingServiceGrpcClient.class);
-        service = new BillingReconciliationService(patientRepository, billingServiceGrpcClient, CONFIG);
+        patientRepository = Mockito.mock(PatientRepository.class);
+        billingServiceGrpcClient = Mockito.mock(BillingServiceGrpcClient.class);
+        patientMutationGateway = Mockito.mock(PatientMutationGateway.class);
+        service = new BillingReconciliationService(
+                patientRepository, billingServiceGrpcClient, CONFIG, patientMutationGateway);
     }
 
     private Patient pendingPatient() {
@@ -109,7 +114,7 @@ class BillingReconciliationServiceTest {
             assertThat(p.getBillingAttemptCount()).isZero();
             assertThat(p.getBillingLastAttemptAt()).isNull();
 
-            verify(patientRepository, times(1)).save(p);
+            verify(patientMutationGateway, times(1)).save(p);
         }
 
         @Test
@@ -126,7 +131,7 @@ class BillingReconciliationServiceTest {
             assertThat(p.getBillingAttemptCount()).isEqualTo(1);
             assertThat(p.getBillingLastAttemptAt()).isNotNull();
 
-            verify(patientRepository, times(1)).save(p);
+            verify(patientMutationGateway, times(1)).save(p);
         }
     }
 
@@ -144,7 +149,7 @@ class BillingReconciliationServiceTest {
 
             assertThat(stillCandidate).isFalse();
             verify(billingServiceGrpcClient, never()).createBillingAccount(anyString(), anyString(), anyString());
-            verify(patientRepository, never()).save(any());
+            verify(patientMutationGateway, never()).save(any());
         }
 
         @Test
@@ -161,7 +166,7 @@ class BillingReconciliationServiceTest {
             assertThat(p.getBillingAttemptCount()).isEqualTo(1);
 
             verify(billingServiceGrpcClient, never()).createBillingAccount(anyString(), anyString(), anyString());
-            verify(patientRepository, never()).save(any());
+            verify(patientMutationGateway, never()).save(any());
         }
 
         @Test
@@ -179,7 +184,7 @@ class BillingReconciliationServiceTest {
             assertThat(p.getBillingAttemptCount()).isZero();
             assertThat(p.getBillingLastAttemptAt()).isNull();
 
-            verify(patientRepository, times(1)).save(p);
+            verify(patientMutationGateway, times(1)).save(p);
         }
 
         @Test
@@ -197,7 +202,7 @@ class BillingReconciliationServiceTest {
             assertThat(p.getBillingAttemptCount()).isEqualTo(3);
             assertThat(p.getBillingLastAttemptAt()).isAfterOrEqualTo(before);
 
-            verify(patientRepository, times(1)).save(p);
+            verify(patientMutationGateway, times(1)).save(p);
         }
     }
 
@@ -211,14 +216,14 @@ class BillingReconciliationServiceTest {
             Patient p = pendingPatient();
             mockBillingSuccess();
             doThrow(new OptimisticLockException("concurrent write (test)"))
-                    .when(patientRepository)
+                    .when(patientMutationGateway)
                     .save(p);
 
             boolean stillCandidate = service.reconcile(p);
 
             assertThat(stillCandidate).isFalse();
             assertThat(p.getBillingStatus()).isEqualTo(BillingProvisioningStatus.PROVISIONED);
-            verify(patientRepository, times(1)).save(p);
+            verify(patientMutationGateway, times(1)).save(p);
         }
 
         @Test
@@ -227,7 +232,7 @@ class BillingReconciliationServiceTest {
             Patient p = pendingPatient();
             mockBillingFailure();
             doThrow(new OptimisticLockException("concurrent write (test)"))
-                    .when(patientRepository)
+                    .when(patientMutationGateway)
                     .save(p);
 
             boolean stillCandidate = service.reconcile(p);
@@ -236,7 +241,7 @@ class BillingReconciliationServiceTest {
             assertThat(p.getBillingStatus()).isEqualTo(BillingProvisioningStatus.FAILED);
             assertThat(p.getBillingAttemptCount()).isEqualTo(1);
 
-            verify(patientRepository, times(1)).save(p);
+            verify(patientMutationGateway, times(1)).save(p);
         }
 
         @Test
@@ -251,7 +256,7 @@ class BillingReconciliationServiceTest {
             assertThat(stillCandidate).isTrue();
             assertThat(p.getBillingStatus()).isEqualTo(BillingProvisioningStatus.FAILED);
 
-            verify(patientRepository, times(1)).save(p);
+            verify(patientMutationGateway, times(1)).save(p);
         }
     }
 
