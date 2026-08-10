@@ -9,6 +9,8 @@ spring:
     hibernate:
       ddl-auto: validate
   kafka:
+    listener:
+      ack-mode: manual
     consumer:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer

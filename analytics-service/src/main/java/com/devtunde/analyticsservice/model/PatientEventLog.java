@@ -51,4 +51,8 @@ public class PatientEventLog {
     public LocalDateTime getReceivedAt() {
         return receivedAt;
     }
+
+    public void setReceivedAt(LocalDateTime receivedAt) {
+        this.receivedAt = receivedAt;
+    }
 }
