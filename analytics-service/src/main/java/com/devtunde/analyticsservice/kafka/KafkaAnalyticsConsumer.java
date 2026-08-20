@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional; 
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
@@ -26,6 +27,7 @@ public class KafkaAnalyticsConsumer {
     }
 
     @KafkaListener(topics = "${kafka.topics.patient-event}")
+    @Transactional
     public void consumerEvent(ConsumerRecord<String, byte[]> record, Acknowledgment acknowledgement) {
 
         PatientEvent event;
