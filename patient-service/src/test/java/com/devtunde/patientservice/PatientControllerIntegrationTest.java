@@ -39,7 +39,7 @@ class PatientControllerIntegrationTest {
 
     @Container
     @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:latest");
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17");
 
     @Autowired
     private TestRestTemplate restTemplate;

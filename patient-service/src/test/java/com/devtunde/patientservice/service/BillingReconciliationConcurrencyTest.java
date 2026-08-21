@@ -32,7 +32,7 @@ class BillingReconciliationConcurrencyTest {
 
     @Container
     @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:latest");
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17");
 
     @Autowired
     private PatientRepository patientRepository;
