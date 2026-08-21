@@ -6,8 +6,7 @@ services:
       POSTGRES_USER: ${PATIENT_SERVICE_DB_USER}
       POSTGRES_PASSWORD: ${PATIENT_SERVICE_DB_PASSWORD}
       POSTGRES_DB: ${PATIENT_SERVICE_DB_NAME}
-    ports:
-      - "5000:5432"
+    ports: []
     volumes:
       - patient-service-db-data:/var/lib/postgresql/data
     networks:
@@ -26,8 +25,7 @@ services:
       POSTGRES_USER: ${BILLING_SERVICE_DB_USER}
       POSTGRES_PASSWORD: ${BILLING_SERVICE_DB_PASSWORD}
       POSTGRES_DB: ${BILLING_SERVICE_DB_NAME}
-    ports:
-      - "5001:5432"
+    ports: []
     volumes:
       - billing-service-db-data:/var/lib/postgresql/data
     networks:
@@ -38,6 +36,25 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  analytics-service-db:
+    image: postgres:17
+    container_name: analytics-service-db
+    environment:
+      POSTGRES_DB: ${ANALYTICS_SERVICE_DB_NAME}
+      POSTGRES_USER: ${ANALYTICS_SERVICE_DB_USER}
+      POSTGRES_PASSWORD: ${ANALYTICS_SERVICE_DB_PASSWORD}
+    ports: []
+    volumes:
+      - analytics-service-db-data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ANALYTICS_SERVICE_DB_USER} -d ${ANALYTICS_SERVICE_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s 
 
   kafka:
     image: apache/kafka:latest
@@ -114,10 +131,37 @@ services:
       timeout: 5s
       retries: 5
       start_period: 40s
+
+  analytics-service:
+    build:
+      context: ./analytics-service
+      dockerfile: Dockerfile
+    image: analytics-service:latest
+    container_name: analytics-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://analytics-service-db:5432/${ANALYTICS_SERVICE_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${ANALYTICS_SERVICE_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${ANALYTICS_SERVICE_DB_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+    ports:
+      - "4002:4002"
+    networks:
+      - internal
+    depends_on:
+      analytics-service-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4002/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     
 volumes:
   patient-service-db-data:
   billing-service-db-data:
+  analytics-service-db-data:
   kafka-data:
 
 networks:
