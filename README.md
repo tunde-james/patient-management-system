@@ -144,6 +144,12 @@ Swagger UI: [http://localhost:4002/swagger-ui.html](http://localhost:4002/swagge
 
 Each service owns its test suite and uses Testcontainers for database-backed tests.
 
+All services follow the same three-layer test split:
+
+- **Wire-layer slices** (`@WebMvcTest` for REST, pure-Mockito for gRPC) — routing, status codes, and JSON wire shapes in sub-second runs with no Docker
+- **Pure-Mockito service tests** — business logic (e.g. billing provisioning branches) with all collaborators mocked, milliseconds per case
+- **Testcontainers smokes** — a minimal number of real-Postgres tests proving only that layers are wired and rows actually persist (including soft-delete hiding)
+
 ```bash
 cd patient-service
 mvn test
