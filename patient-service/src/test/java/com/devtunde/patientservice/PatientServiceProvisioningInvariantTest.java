@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import org.junit.jupiter.api.DisplayName;
@@ -30,6 +31,7 @@ import com.devtunde.patientservice.service.PatientService;
 
 @SpringBootTest
 @Testcontainers
+@TestPropertySource(properties = "billing.reconciliation.scheduler.enabled=false")
 public class PatientServiceProvisioningInvariantTest {
 
     @Container
