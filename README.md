@@ -2,8 +2,6 @@
 
 Production-oriented patient registration, billing provisioning, and analytics system built with Java 21, Spring Boot 3.5, Docker Compose, gRPC, Kafka, PostgreSQL, and Flyway.
 
-Tutorial: [Build & Deploy a Production-Ready Patient Management System with Microservices](https://www.youtube.com/watch?v=tseqdcFfTUY)
-
 ## Architecture
 
 ```mermaid
