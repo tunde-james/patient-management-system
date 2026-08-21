@@ -55,7 +55,7 @@ public class PatientService {
     public PatientResDto getPatient(UUID id) {
 
         if (id == null) {
-            throw new IllegalArgumentException("Patient not found with ID: " + id);
+            throw new IllegalArgumentException("Patient ID cannot be null");
         }
 
         return patientRepository

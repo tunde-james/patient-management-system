@@ -1,5 +1,6 @@
 package com.devtunde.patientservice.controller;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -249,7 +250,7 @@ class PatientControllerTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.billingStatus").value("FAILED"))
-                .andExpect(jsonPath("$.billingAccountId").doesNotExist());
+                .andExpect(jsonPath("$.billingAccountId").value(nullValue()));
     }
 
     @Test
