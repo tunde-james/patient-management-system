@@ -21,4 +21,7 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - run: mvn -B test --projects ${{ matrix.service }}
+      
+      - name: Test ${{matrix.service}}
+        run: mvn -B test 
+        working-directory: ${{matrix.service}}
