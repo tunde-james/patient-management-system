@@ -115,7 +115,7 @@ class PatientControllerIntegrationTest {
         assertThat(body.get("billingAccountId")).isEqualTo("AAAAAAAAAA");
         assertThat(body.get("billingStatus")).isEqualTo("PROVISIONED");
         assertThat(body.get("id")).asString().isNotEmpty();
-        assertThat(response.getHeaders().getLocation()).asString().startsWith("/api/v1/patient/");
+        assertThat(response.getHeaders().getLocation()).asString().startsWith("/api/v1/patients/");
     }
 
     @Test
@@ -312,6 +312,13 @@ class PatientControllerIntegrationTest {
                         .anyMatch(p -> ((Map<?, ?>) p).get("id").equals(id)))
                 .as("deleted patient should not appear in GET /api/v1/patients")
                 .isFalse();
+
+        // @SQLRestriction("is_deleted = false") makes findById skip soft-deleted rows,
+        // so a deleted patient's id must 404 exactly like a never-existing one.
+        ResponseEntity<Map> getById = restTemplate.getForEntity("/api/v1/patients/" + id, Map.class);
+        assertThat(getById.getStatusCode())
+                .as("GET by id on a soft-deleted patient must return 404")
+                .isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test

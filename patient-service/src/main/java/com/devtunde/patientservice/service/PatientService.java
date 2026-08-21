@@ -52,6 +52,18 @@ public class PatientService {
         return patientResDtos;
     }
 
+    public PatientResDto getPatient(UUID id) {
+
+        if (id == null) {
+            throw new IllegalArgumentException("Patient not found with ID: " + id);
+        }
+
+        return patientRepository
+                .findById(id)
+                .map(PatientMapper::toDTO)
+                .orElseThrow(() -> new PatientNotFoundException("Patient not found with ID: " + id));
+    }
+
     public PatientResDto createPatient(PatientReqDto patientReqDto) {
 
         if (patientRepository.existsByEmail(patientReqDto.email())) {

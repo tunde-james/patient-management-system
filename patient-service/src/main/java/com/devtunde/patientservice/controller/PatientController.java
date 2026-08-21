@@ -46,13 +46,20 @@ public class PatientController {
         return ResponseEntity.ok().body(patients);
     }
 
+    @GetMapping("/{id}")
+    @Operation(summary = "Get Patient by ID")
+    public ResponseEntity<PatientResDto> getPatient(@PathVariable UUID id) {
+
+        return ResponseEntity.ok(patientService.getPatient(id));
+    }
+
     @PostMapping
     @Operation(summary = "Create Patient")
     public ResponseEntity<PatientResDto> createPatient(@Valid @RequestBody PatientReqDto patientReqDto) {
 
         PatientResDto patientResDto = patientService.createPatient(patientReqDto);
 
-        URI location = Objects.requireNonNull(URI.create("/api/v1/patient/" + patientResDto.id()), "");
+        URI location = Objects.requireNonNull(URI.create("/api/v1/patients/" + patientResDto.id()), "");
 
         return ResponseEntity.created(location).body(patientResDto);
     }
