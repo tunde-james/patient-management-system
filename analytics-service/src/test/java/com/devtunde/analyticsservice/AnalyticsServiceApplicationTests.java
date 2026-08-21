@@ -24,7 +24,7 @@ class AnalyticsServiceApplicationTests {
 	@Container
 	@ServiceConnection
 	static PostgreSQLContainer<?> postgres =
-			new PostgreSQLContainer<>("postgres:latest");
+			new PostgreSQLContainer<>("postgres:17");
 
 	@Test
 	void contextLoads() {
