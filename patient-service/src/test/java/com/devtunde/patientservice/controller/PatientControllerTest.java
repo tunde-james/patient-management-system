@@ -211,6 +211,48 @@ class PatientControllerTest {
     }
 
     @Test
+    @DisplayName("POST with malformed dateOfBirth format -> 400 invalid-format")
+    void createPatient_badDateFormat_returns400() throws Exception {
+
+        mockMvc.perform(post("/api/v1/patients")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Ada Okafor","email":"bad-date@example.com",
+                                 "address":"12 Marina Road, Lagos","dateOfBirth":"01/06/1990",
+                                 "registeredDate":"2024-01-01"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST when billing failed -> 201 with wire shape FAILED + null account id")
+    void createPatient_billingFailedWireShape_rendersOverHttp() throws Exception {
+
+        // The service-level failure matrix lives in PatientServiceCreatePatientTest;
+        // this proves only that a FAILED result renders correctly on the wire.
+        when(patientService.createPatient(any()))
+                .thenReturn(new PatientResDto(
+                        UUID.randomUUID().toString(),
+                        "Ada Okafor",
+                        "failed-billing@example.com",
+                        "12 Marina Road, Lagos",
+                        LocalDate.of(1990, 6, 1),
+                        null,
+                        "FAILED"));
+
+        mockMvc.perform(post("/api/v1/patients")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Ada Okafor","email":"failed-billing@example.com",
+                                 "address":"12 Marina Road, Lagos","dateOfBirth":"1990-06-01",
+                                 "registeredDate":"2024-01-01"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.billingStatus").value("FAILED"))
+                .andExpect(jsonPath("$.billingAccountId").doesNotExist());
+    }
+
+    @Test
     @DisplayName("GET /api/v1/patients/{id} with a non-UUID segment -> 400 (type mismatch)")
     void getPatient_nonUuidSegment_returns400() throws Exception {
 
