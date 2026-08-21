@@ -23,7 +23,6 @@ import com.devtunde.analyticsservice.dto.PatientBucketsDto;
 import com.devtunde.analyticsservice.dto.PatientTotalsDto;
 import com.devtunde.analyticsservice.service.AnalyticsQueryService;
 
-
 @WebMvcTest(AnalyticsController.class)
 class AnalyticsControllerTest {
 
@@ -97,5 +96,21 @@ class AnalyticsControllerTest {
     void unknownPath_returns404() throws Exception {
 
         mockMvc.perform(get("/api/v1/analytics/no-such-endpoint")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("GET /patients/by-day?from=&to= with inverted range -> 400")
+    void byDay_invertedRange_returns400() throws Exception {
+
+        LocalDate from = LocalDate.of(2026, 8, 5);
+        LocalDate to = LocalDate.of(2026, 8, 1);
+
+        when(analyticsQueryService.byDay(eq(from), eq(to)))
+                .thenThrow(new IllegalArgumentException("'from' must not be after 'to'"));
+
+        mockMvc.perform(get("/api/v1/analytics/patients/by-day")
+                        .param("from", from.toString())
+                        .param("to", to.toString()))
+                .andExpect(status().isBadRequest());
     }
 }

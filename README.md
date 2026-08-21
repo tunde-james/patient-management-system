@@ -53,7 +53,7 @@ Database rule: service databases are private containers. They keep `ports: []` i
 | --- | --- | --- |
 | Application APIs | `4000`, `4001`, `4002` | Local development only |
 | Billing gRPC | `9001` | Used by `patient-service` |
-| Kafka | `9092`, `9094` | Internal listener is `kafka:9092`; IDE/local clients can use `localhost:9094` |
+| Kafka | `9094` | Docker clients use `kafka:9092`; IDE/local clients use `localhost:9094` |
 | Postgres databases | None | Database-per-service, internal Docker network only |
 
 ## Tech Stack

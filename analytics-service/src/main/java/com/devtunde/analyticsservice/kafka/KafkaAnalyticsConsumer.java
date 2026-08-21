@@ -5,12 +5,13 @@ import java.util.UUID;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; 
+import org.springframework.transaction.annotation.Transactional;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.devtunde.analyticsservice.eventtype.AnalyticsEventType;
 import com.devtunde.analyticsservice.repository.PatientEventLogRepository;
 import com.google.protobuf.InvalidProtocolBufferException;
 import patient.events.PatientEvent;
@@ -36,34 +37,51 @@ public class KafkaAnalyticsConsumer {
             event = PatientEvent.parseFrom(record.value());
         } catch (InvalidProtocolBufferException ex) {
             log.error(
-                    "analytics: unparseable event at offset {} partition {}; committing and skipping",
-                    record.offset(),
-                    record.partition(),
-                    ex.getMessage());
+                    "analytics: unparseable event at offset {} partition {}", record.offset(), record.partition(), ex);
             acknowledgement.acknowledge();
 
             return;
         }
 
+        AnalyticsEventType type;
+
         try {
-            int inserted = patientEventLogRepository.insertIfAbsent(
-                    UUID.fromString(event.getPatientId()), event.getEventType());
+            type = AnalyticsEventType.valueOf(event.getEventType());
+        } catch (IllegalArgumentException unknown) {
+            log.error(
+                    "analytics: unsupported event type '{}' at offset {} partition {}; committing and skipping",
+                    event.getEventType(),
+                    record.offset(),
+                    record.partition());
+
+            acknowledgement.acknowledge();
+            return;
+        }
+
+        try {
+            int inserted = patientEventLogRepository.insertIfAbsent(UUID.fromString(event.getPatientId()), type.name());
 
             if (inserted == 1) {
-                log.info("analytics: recorded {} for patient {}", event.getEventType(), event.getPatientId());
+                log.info(
+                        "analytics: recorded event type {} at offset {} partition {}",
+                        type,
+                        record.offset(),
+                        record.partition());
             } else {
                 log.debug(
-                        "analytics: duplicate {} for patient {} - idempotent no-op",
-                        event.getEventType(),
-                        event.getPatientId());
+                        "analytics: duplicate event type {} at offset {} partition {} - idempotent no-op",
+                        type,
+                        record.offset(),
+                        record.partition());
             }
 
             acknowledgement.acknowledge();
         } catch (IllegalArgumentException badUuid) {
             log.error(
-                    "analytics: malformed patient_id '{}' at offset {}; not committing",
-                    event.getPatientId(),
-                    record.offset());
+                    "analytics: malformed patient_id at offset {} partition {}; not committing",
+                    record.offset(),
+                    record.partition());
+
             throw badUuid;
         }
     }

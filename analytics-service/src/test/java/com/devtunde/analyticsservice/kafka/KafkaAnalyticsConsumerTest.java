@@ -128,4 +128,24 @@ class KafkaAnalyticsConsumerTest {
 
         verify(ack, never()).acknowledge();
     }
+
+    @Test
+    @DisplayName("unknown event type -> ack and skip, repository never called")
+    void unknownEventType_isSkipped_repositoryNeverCalled() {
+
+        byte[] eventBytes = PatientEvent.newBuilder()
+                .setPatientId(UUID.randomUUID().toString())
+                .setEventType("SOME_UNKNOWN_TYPE")
+                .build()
+                .toByteArray();
+
+        ConsumerRecord<String, byte[]> record = new ConsumerRecord<>("patient.events", 0, 0L, "key", eventBytes);
+
+        Acknowledgment ack = mock(Acknowledgment.class);
+
+        consumer.consumerEvent(record, ack);
+
+        verify(patientEventLogRepository, never()).insertIfAbsent(any(), any());
+        verify(ack).acknowledge();
+    }
 }

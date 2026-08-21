@@ -1,9 +1,12 @@
 package com.devtunde.analyticsservice.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.sql.Date;
@@ -154,6 +157,49 @@ class AnalyticsQueryServiceTest {
         assertEquals(expectedFrom, dto.from());
         assertEquals(expectedTo, dto.to());
         assertEquals(0, dto.buckets().size());
+    }
+
+    @Test
+    @DisplayName("byDay: only from supplied -> ends at clock today, starts at from")
+    void byDay_fromOnly_defaultsTo() {
+        LocalDate from = LocalDate.of(2026, Month.AUGUST, 1);
+        LocalDate expectedTo = LocalDate.of(2026, Month.AUGUST, 10);
+
+        when(patientEventLogRepository.countByDay(
+                        eq(from.atStartOfDay()), eq(expectedTo.plusDays(1).atStartOfDay())))
+                .thenReturn(List.of());
+
+        PatientBucketsDto dto = queryService.byDay(from, null);
+
+        assertEquals(from, dto.from());
+        assertEquals(expectedTo, dto.to());
+    }
+
+    @Test
+    @DisplayName("byDay: only to supplied -> starts 29 days before to")
+    void byDay_toOnly_defaultsFrom() {
+        LocalDate to = LocalDate.of(2026, Month.AUGUST, 10);
+        LocalDate expectedFrom = to.minusDays(29); // 2026-07-12
+
+        when(patientEventLogRepository.countByDay(
+                        eq(expectedFrom.atStartOfDay()), eq(to.plusDays(1).atStartOfDay())))
+                .thenReturn(List.of());
+
+        PatientBucketsDto dto = queryService.byDay(null, to);
+
+        assertEquals(expectedFrom, dto.from());
+        assertEquals(to, dto.to());
+    }
+
+    @Test
+    @DisplayName("byDay: from after to -> throws IllegalArgumentException")
+    void byDay_invertedRange_throws() {
+        LocalDate from = LocalDate.of(2026, Month.AUGUST, 5);
+        LocalDate to = LocalDate.of(2026, Month.AUGUST, 1);
+
+        assertThrows(IllegalArgumentException.class, () -> queryService.byDay(from, to));
+
+        verify(patientEventLogRepository, never()).countByDay(any(), any());
     }
 
     private static PatientBucketRow bucketRow(LocalDate date, String eventType, long count) {

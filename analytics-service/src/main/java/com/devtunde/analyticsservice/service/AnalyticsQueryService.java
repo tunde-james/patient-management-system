@@ -53,9 +53,18 @@ public class AnalyticsQueryService {
 
     public PatientBucketsDto byDay(LocalDate from, LocalDate to) {
 
-        if (from == null || to == null) {
-            to = LocalDate.now(clock);
-            from = to.minusDays(29);
+        LocalDate today = LocalDate.now(clock);
+
+        if (from == null) {
+            from = today.minusDays(29);
+        }
+
+        if (to == null) {
+            to = today;
+        }
+
+        if (from.isAfter(to)) {
+            throw new IllegalArgumentException("'from' must not be after 'to'");
         }
 
         LocalDateTime fromAtStartOfDay = from.atStartOfDay();
