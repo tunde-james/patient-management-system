@@ -12,6 +12,8 @@ HELP.md
 # Learning records and generated lessons
 learning-records/
 lessons/
+/assets/
+/reference/
 MISSION-KAFKA.md
 NOTES.md
 RESOURCES.md
