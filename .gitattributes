@@ -1,1 +1,28 @@
+# Normalize line endings across all machines (Windows dev → Linux containers).
+# Repo-internal form is always LF; working-tree checkout rules per pattern below.
+
 * text=auto
+
+# Everything that runs inside Linux containers MUST be LF on disk, even on Windows:
+*.sh           text eol=lf
+mvnw           text eol=lf
+*.properties   text eol=lf
+Dockerfile     text eol=lf
+*.yml          text eol=lf
+*.yaml         text eol=lf
+*.json         text eol=lf
+*.sql          text eol=lf
+
+# Java sources are compiled cross-platform, but LF keeps diffs clean:
+*.java         text eol=lf
+*.xml          text eol=lf
+*.proto        text eol=lf
+
+# Windows-only scripts (none today — add here if any appear):
+*.bat          text eol=crlf
+*.cmd          text eol=crlf
+
+# Never touch these:
+*.jar          binary
+*.png          binary
+*.jpg          binary
