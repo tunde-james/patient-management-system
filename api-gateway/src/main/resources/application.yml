@@ -3,31 +3,46 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      routes:
-        - id: patient-service-route
-          uri: http://patient-service:4000
-          predicates:
-            - Path=/api/v1/patients/**
+      server:
+        webflux:
+          routes:
+            - id: patient-service-route
+              uri: http://patient-service:4000
+              predicates:
+                - Path=/api/v1/patients/**
 
-        - id: analytics-service-route
-          uri: http://analytics-service:4002
-          predicates:
-            - path=/api/v1/analytics/**
-        
-        - id: api-docs-patient-route
-          uri: http://patient-service:4000
-          predicates:
-            - Path=/api-docs/patients
-          filters:
-            - RewritePath=/api-docs/patients,/v3/api-docs
-  springdoc:
-    swagger-ui:
-      urls:
-        - name: patient-service
-          url: /api-docs/patients
-        - name: analytics-service
-          url: /api-docs/analytics ## http://localhost:4004/swagger-ui.html
+            - id: analytics-service-route
+              uri: http://analytics-service:4002
+              predicates:
+                - Path=/api/v1/analytics/**
+
+            - id: api-docs-patient-route
+              uri: http://patient-service:4000
+              predicates:
+                - Path=/api-docs/patients
+              filters:
+                - RewritePath=/api-docs/patients,/v3/api-docs
+
+            - id: api-docs-analytics-route
+              uri: http://analytics-service:4002
+              predicates:
+                - Path=/api-docs/analytics
+              filters:
+                - RewritePath=/api-docs/analytics,/v3/api-docs
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: patient-service
+        url: /api-docs/patients
+      - name: analytics-service
+        url: /api-docs/analytics
 
 server:
   port: 4004
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
