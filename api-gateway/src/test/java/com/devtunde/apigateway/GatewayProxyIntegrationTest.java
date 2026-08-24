@@ -1,5 +1,7 @@
 package com.devtunde.apigateway;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
