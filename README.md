@@ -41,16 +41,17 @@ Database rule: service databases are private containers. They keep `ports: []` i
 
 | Service | Responsibility | Local entrypoint |
 | --- | --- | --- |
-| `patient-service` | Patient CRUD, best-effort billing provisioning, Kafka event production, reconciliation | `http://localhost:4000` |
-| `billing-service` | Billing account provisioning and lifecycle over gRPC | `http://localhost:4001`, `grpc://localhost:9001` |
-| `analytics-service` | Kafka consumer and counts-only patient registration metrics API | `http://localhost:4002` |
+| `api-gateway` | Single HTTP entry point; routes to backend services, aggregates Swagger docs | `http://localhost:4004` |
+| `patient-service` | Patient CRUD, best-effort billing provisioning, Kafka event production, reconciliation | internal (`:4000`) |
+| `billing-service` | Billing account provisioning and lifecycle over gRPC | internal (`:4001`, gRPC `:9001`) |
+| `analytics-service` | Kafka consumer and counts-only patient registration metrics API | internal (`:4002`) |
 
 ## Runtime
 
 | Component | Host access | Notes |
 | --- | --- | --- |
-| Application APIs | `4000`, `4001`, `4002` | Local development only |
-| Billing gRPC | `9001` | Used by `patient-service` |
+| API Gateway | `4004` | The only HTTP entry point; backends are internal Docker-network services |
+| Billing gRPC | None | Used internally by `patient-service` over the Docker network |
 | Kafka | `9094` | Docker clients use `kafka:9092`; IDE/local clients use `localhost:9094` |
 | Postgres databases | None | Database-per-service, internal Docker network only |
 
@@ -108,16 +109,25 @@ This starts three Spring Boot services, three private PostgreSQL databases, and 
 ### 3. Check health
 
 ```bash
-curl http://localhost:4000/actuator/health
-curl http://localhost:4001/actuator/health
-curl http://localhost:4002/actuator/health
+curl http://localhost:4004/actuator/health
 ```
+
+(Backend healthchecks run inside the Docker network; only the gateway is host-exposed.)
 
 ## API Surface
 
-### Patient Service
+All requests go through the gateway — same paths as the backends, port `4004`.
+Sample requests live in [`api-requests/api-gateway/all-endpoints.http`](api-requests/api-gateway/all-endpoints.http).
 
-| Method | Path | Description |
+### Aggregated Swagger UI
+
+**[http://localhost:4004/swagger-ui.html](http://localhost:4004/swagger-ui.html)** — one page;
+a dropdown switches between patient-service and analytics-service specs (proxied via the
+`/api-docs/*` gateway routes).
+
+### Patient Service (via gateway)
+
+| Method | Path through gateway | Description |
 | --- | --- | --- |
 | `POST` | `/api/v1/patients` | Register a patient and attempt billing provisioning |
 | `GET` | `/api/v1/patients` | List patients |
@@ -125,18 +135,55 @@ curl http://localhost:4002/actuator/health
 | `PUT` | `/api/v1/patients/{id}` | Update patient |
 | `DELETE` | `/api/v1/patients/{id}` | Delete patient |
 
-Swagger UI: [http://localhost:4000/swagger-ui.html](http://localhost:4000/swagger-ui.html)
+### Analytics Service (via gateway)
 
-### Analytics Service
-
-| Method | Path | Description |
+| Method | Path through gateway | Description |
 | --- | --- | --- |
 | `GET` | `/api/v1/analytics/patients/total` | Lifetime counts by event type |
 | `GET` | `/api/v1/analytics/patients/total?since=2026-08-01` | Counts from a date |
 | `GET` | `/api/v1/analytics/patients/by-day` | Per-day counts, default last 30 days |
 | `GET` | `/api/v1/analytics/patients/by-day?from=2026-08-01&to=2026-08-20` | Per-day counts for a custom window |
 
-Swagger UI: [http://localhost:4002/swagger-ui.html](http://localhost:4002/swagger-ui.html)
+## Port Exposure Policy
+
+Why some containers have host port bindings and others don't — and why that changed over time.
+
+### Pre-gateway (historical)
+
+Before the gateway existed, every service published its own host port so a developer could reach
+each one directly:
+
+| Container | Then-host ports | Now |
+| --- | --- | --- |
+| patient-service | `4000` | removed — internal only |
+| billing-service | `4001`, gRPC `9001` | removed — internal only |
+| analytics-service | `4002` | removed — internal only |
+| databases (all) | never published | unchanged |
+| Kafka | `9092`, `9094` | kept — IDE escape hatch (host-run apps need `localhost:9094`) |
+
+That was fine while the fleet was small and there was no single front door.
+
+### Post-gateway (current)
+
+With `api-gateway` on `:4004`, the standard is **one ingress point**:
+
+- Only the gateway publishes an HTTP port. All client traffic — humans, tests, future frontends —
+  enters through `:4004`, and the gateway routes to backends over the internal Docker network.
+- Backend services have **no host bindings**: they are reachable only from inside the Docker network,
+  which removes a whole class of direct-access attack surface and makes the gateway the single place
+  where cross-cutting concerns (auth, rate limiting, logging) will live.
+- This mirrors production: a cloud load balancer / API gateway is public; ECS tasks behind it are not.
+
+### The debugging exception
+
+If you ever need to hit a backend directly from the host (deep debugging), temporarily re-add its
+port binding in `docker-compose.yml`, restart that service, debug, then remove it again. Do not
+leave debug ports committed.
+
+### Billing note
+
+`billing-service` has no HTTP surface at all (gRPC only), so it intentionally has no gateway route —
+gateways route HTTP; internal server-to-server gRPC (patient → billing) stays on the Docker network.
 
 ## Testing
 
