@@ -1,0 +1,67 @@
+### Gateway traffic entry point — ALL requests go through :4004 now.
+### Backend ports (4000/4001/4002) are internal-only behind this gateway.
+
+@baseUrl = http://localhost:4004
+
+### ── Analytics Service ───────────────────────────────────────────
+
+### Lifetime totals by event type
+GET {{baseUrl}}/api/v1/analytics/patients/total
+
+### Totals filtered from a date
+GET {{baseUrl}}/api/v1/analytics/patients/total?since=2026-08-01
+
+### Per-day counts, default window (last 30 days)
+GET {{baseUrl}}/api/v1/analytics/patients/by-day
+
+### Per-day counts, custom window
+GET {{baseUrl}}/api/v1/analytics/patients/by-day?from=2026-08-01&to=2026-08-10
+
+### ── Patient Service ─────────────────────────────────────────────
+
+### List all patients
+GET {{baseUrl}}/api/v1/patients
+
+### Create a patient (also fires billing provisioning + Kafka event)
+POST {{baseUrl}}/api/v1/patients
+Content-Type: application/json
+
+{
+  "name": "Gateway Test",
+  "email": "gateway@example.com",
+  "address": "12 Gateway Boulevard",
+  "dateOfBirth": "1990-01-01",
+  "registeredDate": "2026-08-21"
+}
+
+### Get patient by ID (copy an id from the create/list response)
+GET {{baseUrl}}/api/v1/patients/<id>
+
+### Update patient
+PUT {{baseUrl}}/api/v1/patients/<id>
+Content-Type: application/json
+
+{
+  "name": "Gateway Updated",
+  "email": "updated@example.com",
+  "address": "99 Updated Avenue"
+}
+
+### Update date of birth
+PATCH {{baseUrl}}/api/v1/patients/<id>/date-of-birth
+Content-Type: application/json
+
+{
+  "dateOfBirth": "1985-05-05"
+}
+
+### Delete patient (soft-delete; later GETs return 404)
+DELETE {{baseUrl}}/api/v1/patients/<id>
+
+### ── Docs (proxied through the gateway) ──────────────────────────
+
+### Patient service OpenAPI spec via gateway
+GET {{baseUrl}}/api-docs/patients
+
+### Analytics service OpenAPI spec via gateway (if routed)
+GET {{baseUrl}}/api-docs/analytics
