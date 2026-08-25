@@ -29,6 +29,9 @@ spring:
                 - Path=/api-docs/analytics
               filters:
                 - RewritePath=/api-docs/analytics,/v3/api-docs
+          httpclient:
+            connect-timeout: 5000
+            response-timeout: 10s
 
 springdoc:
   swagger-ui:
