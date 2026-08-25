@@ -5,7 +5,7 @@ WORKDIR /app
 COPY mvnw pom.xml ./
 COPY .mvn .mvn/
 
-RUN apt-get update \ && apt-get install -y --no-install-recommends unzip \ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends unzip && rm -rf /var/lib/apt/lists/*
 
 RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
 
