@@ -63,5 +63,5 @@ DELETE {{baseUrl}}/api/v1/patients/<id>
 ### Patient service OpenAPI spec via gateway
 GET {{baseUrl}}/api-docs/patients
 
-### Analytics service OpenAPI spec via gateway (if routed)
+### Analytics service OpenAPI spec via gateway
 GET {{baseUrl}}/api-docs/analytics
