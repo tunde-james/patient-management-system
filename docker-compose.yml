@@ -92,8 +92,6 @@ services:
       SPRING_SQL_INIT_MODE: always
       BILLING_SERVICE_ADDRESS: billing-service
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
-    ports:
-      - "4000:4000"
     networks:
       - internal
     depends_on:
@@ -117,9 +115,6 @@ services:
       SPRING_DATASOURCE_USERNAME: ${BILLING_SERVICE_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${BILLING_SERVICE_DB_PASSWORD}
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
-    ports:
-      - "4001:4001"
-      - "9001:9001"
     networks:
       - internal
     depends_on:
@@ -144,8 +139,6 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${ANALYTICS_SERVICE_DB_PASSWORD}
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       SPRING_KAFKA_BOOTSTRAP_SERVERS: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
-    ports:
-      - "4002:4002"
     networks:
       - internal
     depends_on:
@@ -153,6 +146,28 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:4002/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+  
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    image: api-gateway:latest
+    container_name: api-gateway
+    ports:
+      - "4004:4004"
+    networks:
+      - internal
+    depends_on:
+      patient-service:
+        condition: service_healthy
+      analytics-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4004/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

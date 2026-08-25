@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [patient-service, billing-service, analytics-service]
+        service: [patient-service, billing-service, analytics-service, api-gateway]
     steps:
       - uses: actions/checkout@v4
 
@@ -36,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [patient-service, billing-service, analytics-service]
+        service: [patient-service, billing-service, analytics-service, api-gateway]
     steps:
       - uses: actions/checkout@v4
 
