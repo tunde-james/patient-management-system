@@ -7,21 +7,22 @@ Production-oriented patient registration, billing provisioning, and analytics sy
 ```mermaid
 flowchart LR
   Client[API client]
+  Gateway[api-gateway<br/>:4004<br/>only host-exposed service]
 
-  Patient[patient-service<br/>REST 4000]
-  Billing[billing-service<br/>REST 4001<br/>gRPC 9001]
-  Analytics[analytics-service<br/>REST 4002]
+  Patient[patient-service<br/>REST :4000 internal]
+  Billing[billing-service<br/>REST :4001 internal<br/>gRPC :9001 internal]
+  Analytics[analytics-service<br/>REST :4002 internal]
   Kafka[(Kafka<br/>patient.events)]
 
   PatientDb[(patient-service-db<br/>Postgres 17<br/>no host port)]
   BillingDb[(billing-service-db<br/>Postgres 17<br/>no host port)]
   AnalyticsDb[(analytics-service-db<br/>Postgres 17<br/>no host port)]
 
-  Client -->|HTTP| Patient
-  Client -->|HTTP| Billing
-  Client -->|HTTP| Analytics
+  Client -->|HTTP :4004| Gateway
+  Gateway -->|/api/v1/patients/**| Patient
+  Gateway -->|/api/v1/analytics/**| Analytics
 
-  Patient -->|gRPC| Billing
+  Patient -->|gRPC, internal network| Billing
   Patient -->|publishes events| Kafka
   Kafka -->|consumes events| Analytics
 
@@ -29,11 +30,16 @@ flowchart LR
   Billing -->|JDBC, internal network| BillingDb
   Analytics -->|JDBC, internal network| AnalyticsDb
 
+  classDef gateway fill:#fff7e6,stroke:#C9A227,stroke-width:2px,color:#111827
   classDef service fill:#eef6ff,stroke:#2563eb,stroke-width:1px,color:#111827
   classDef data fill:#ecfdf3,stroke:#16a34a,stroke-width:1px,color:#111827
+  class Gateway gateway
   class Patient,Billing,Analytics service
   class Kafka,PatientDb,BillingDb,AnalyticsDb data
 ```
+
+The API client never reaches backend services directly — every request enters through the
+gateway on `:4004`, which routes over the internal Docker network.
 
 Database rule: service databases are private containers. They keep `ports: []` in `docker-compose.yml`, are not reachable through `localhost`, and are accessed only by service name inside the Docker network.
 
@@ -104,7 +110,7 @@ Do not add database host port variables. The services connect to their databases
 docker compose up --build -d
 ```
 
-This starts three Spring Boot services, three private PostgreSQL databases, and Kafka.
+This starts four Spring Boot services (gateway + three backends), three private PostgreSQL databases, and Kafka.
 
 ### 3. Check health
 
