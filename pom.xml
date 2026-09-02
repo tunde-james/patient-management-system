@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.devtunde</groupId>
+	<artifactId>patient-management-system</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<name>patient-management-system</name>
+	<modules>
+		<module>shared/common</module>
+		<module>patient-service</module>
+		<module>billing-service</module>
+		<module>analytics-service</module>
+		<module>auth-service</module>
+		<module>api-gateway</module>
+	</modules>
+</project>
