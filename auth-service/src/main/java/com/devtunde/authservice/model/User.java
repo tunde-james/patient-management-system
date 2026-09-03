@@ -32,7 +32,12 @@ public class User {
     @Column(nullable = false)
     private boolean enabled = true;
 
-    private Instant lockedSince;
+    private Instant lockedUntil;
+
+    @Column(nullable = false)
+    private int failedLoginCount = 0;
+
+    private Instant failedWindowStartedAt;
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
@@ -87,11 +92,27 @@ public class User {
         this.enabled = enabled;
     }
 
-    public Instant getLockedSince() {
-        return lockedSince;
+    public Instant getLockedUntil() {
+        return lockedUntil;
     }
 
-    public void setLockedSince(Instant lockedSince) {
-        this.lockedSince = lockedSince;
+    public void setLockedUntil(Instant lockedUntil) {
+        this.lockedUntil = lockedUntil;
+    }
+
+    public int getFailedLoginCount() {
+        return failedLoginCount;
+    }
+
+    public void setFailedLoginCount(int failedLoginCount) {
+        this.failedLoginCount = failedLoginCount;
+    }
+
+    public Instant getFailedWindowStartedAt() {
+        return failedWindowStartedAt;
+    }
+
+    public void setFailedWindowStartedAt(Instant failedWindowStartedAt) {
+        this.failedWindowStartedAt = failedWindowStartedAt;
     }
 }
