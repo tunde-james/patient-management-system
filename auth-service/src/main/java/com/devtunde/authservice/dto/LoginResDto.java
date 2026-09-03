@@ -1,3 +1,5 @@
 package com.devtunde.authservice.dto;
 
-public record LoginResDto(String token) {}
+import java.util.UUID;
+
+public record LoginResDto(UUID id, String email, String message) {}

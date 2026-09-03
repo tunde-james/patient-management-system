@@ -1,5 +1,6 @@
 package com.devtunde.authservice.mapper;
 
+import com.devtunde.authservice.dto.LoginResDto;
 import com.devtunde.authservice.dto.RegisterReqDto;
 import com.devtunde.authservice.dto.RegisterResDto;
 import com.devtunde.authservice.model.User;
@@ -16,5 +17,10 @@ public final class UserMapper {
     public static User toModel(RegisterReqDto registerReqDto, String passwordHash) {
 
         return new User(registerReqDto.email(), passwordHash);
+    }
+
+    public static LoginResDto toLoginDTO(User user) {
+
+        return new LoginResDto(user.getId(), user.getEmail(), "Login successful");
     }
 }
