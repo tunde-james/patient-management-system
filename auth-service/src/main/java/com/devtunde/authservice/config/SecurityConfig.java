@@ -10,7 +10,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties(LockoutProperties.class)
+@EnableConfigurationProperties({LockoutProperties.class, JwtProperties.class})
 public class SecurityConfig {
 
     @Bean
@@ -18,7 +18,10 @@ public class SecurityConfig {
 
         http.csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/api/v1/auth/register", "/api/v1/auth/login")
+                .authorizeHttpRequests(auth -> auth.requestMatchers(
+                                "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/token")
+                        .permitAll()
+                        .requestMatchers("/.well-known/jwks.json")
                         .permitAll()
                         .requestMatchers("/error", "/actuator/health", "/v3/api-docs/**", "/swagger-ui/**")
                         .permitAll()

@@ -18,6 +18,8 @@ auth:
       max-attempts: 5
       lock-duration: 15m
       quiet-window: 1h
+  jwt:
+    access-token-ttl: 15m
 
 management:
   endpoints:

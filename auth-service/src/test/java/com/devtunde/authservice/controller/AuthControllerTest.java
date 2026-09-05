@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import com.devtunde.authservice.model.User;
 import com.devtunde.authservice.service.AuthService;
+import com.devtunde.authservice.service.JwtService;
 import com.devtunde.common.exception.EmailAlreadyExistsException;
 
 @WebMvcTest(AuthController.class)
@@ -35,6 +36,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private JwtService jwtService;
 
     private static User userWithId(UUID id, String email) {
         User user = new User(email, "{argon2}irrelevant-hash-in-slice");
