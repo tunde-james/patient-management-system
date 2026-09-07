@@ -11,6 +11,11 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
 
 auth:
   security:
@@ -20,6 +25,9 @@ auth:
       quiet-window: 1h
   jwt:
     access-token-ttl: 15m
+  refresh:
+    rolling-ttl: 7d
+    absolute-ttl: 30d
 
 management:
   endpoints:

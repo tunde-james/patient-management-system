@@ -17,6 +17,8 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -30,6 +32,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.devtunde.authservice.model.User;
 import com.devtunde.authservice.repository.UserRepository;
+import com.redis.testcontainers.RedisContainer;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -46,6 +49,15 @@ class AuthLoginLockoutTest {
     @Container
     @ServiceConnection
     static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17");
+
+    @Container
+    static RedisContainer redis = new RedisContainer("redis:7");
+
+    @DynamicPropertySource
+    static void redisProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.data.redis.host", () -> redis.getRedisHost());
+        registry.add("spring.data.redis.port", () -> redis.getRedisPort());
+    }
 
     @Autowired
     private MockMvc mockMvc;

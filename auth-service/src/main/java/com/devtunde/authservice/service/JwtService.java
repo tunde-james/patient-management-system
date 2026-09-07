@@ -12,11 +12,15 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 import com.devtunde.authservice.config.JwtProperties;
+import com.devtunde.authservice.exception.InvalidAccessTokenException;
 import com.devtunde.authservice.model.User;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 
 @Service
@@ -70,5 +74,13 @@ public class JwtService {
     public long accessTokenTtlSeconds() {
 
         return jwt.accessTokenTtl().toSeconds();
+    }
+
+    public Jws<Claims> verify(String token) {
+        try {
+            return Jwts.parser().verifyWith(keyPair.getPublic()).build().parseSignedClaims(token);
+        } catch (JwtException | IllegalArgumentException ex) {
+            throw new InvalidAccessTokenException("Invalid access token");
+        }
     }
 }

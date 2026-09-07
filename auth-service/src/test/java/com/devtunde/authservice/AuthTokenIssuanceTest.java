@@ -21,6 +21,8 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -35,6 +37,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.devtunde.authservice.model.User;
 import com.devtunde.authservice.repository.UserRepository;
+import com.redis.testcontainers.RedisContainer;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
@@ -55,6 +58,15 @@ class AuthTokenIssuanceTest {
     @Container
     @ServiceConnection
     static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17");
+
+    @Container
+    static RedisContainer redis = new RedisContainer("redis:7");
+
+    @DynamicPropertySource
+    static void redisProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.data.redis.host", () -> redis.getRedisHost());
+        registry.add("spring.data.redis.port", () -> redis.getRedisPort());
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -151,10 +163,7 @@ class AuthTokenIssuanceTest {
             RSAPublicKey publicKey =
                     jwksPublicKey(key.get("n").asString(), key.get("e").asString());
 
-            Jws<Claims> jws = Jwts.parser()
-                    .verifyWith(publicKey)
-                    .build()
-                    .parseSignedClaims(accessToken);
+            Jws<Claims> jws = Jwts.parser().verifyWith(publicKey).build().parseSignedClaims(accessToken);
 
             assertThat(jws.getHeader().getAlgorithm()).isEqualTo("RS256");
             Claims claims = jws.getPayload();

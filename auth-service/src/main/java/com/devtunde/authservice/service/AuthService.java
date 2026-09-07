@@ -6,11 +6,6 @@ import java.util.Optional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.devtunde.authservice.config.LockoutProperties;
 import com.devtunde.authservice.dto.LoginReqDto;
@@ -27,23 +22,24 @@ import io.micrometer.core.instrument.MeterRegistry;
 @Service
 public class AuthService {
 
-    private static final Logger audit = LoggerFactory.getLogger("AUDIT");
-
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final MeterRegistry meterRegistry;
     private final LockoutProperties lockout;
+    private final AuthAudit authAudit;
 
     public AuthService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             MeterRegistry meterRegistry,
-            LockoutProperties lockout) {
+            LockoutProperties lockout,
+            AuthAudit authAudit) {
 
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.meterRegistry = meterRegistry;
         this.lockout = lockout;
+        this.authAudit = authAudit;
     }
 
     @Transactional
@@ -72,7 +68,7 @@ public class AuthService {
 
         if (optionalUser.isEmpty()) {
             loginMetric("failure");
-            audit("login_failure", "unknown", "unknown_email", "failure");
+            authAudit.log("login_failure", "unknown", "unknown_email", "failure");
             throw new InvalidCredentialsException("Invalid credentials");
         }
 
@@ -80,14 +76,14 @@ public class AuthService {
 
         if (isLocked(user, now)) {
             loginMetric("locked");
-            audit("login_failure", user.getId(), "account_locked", "locked");
+            authAudit.log("login_failure", user.getId(), "account_locked", "locked");
             throw new AccountLockedException(
                     "Your account has been temporarily locked due to excessive failed attempts.");
         }
 
         if (!user.isEnabled()) {
             loginMetric("disabled");
-            audit("login_failure", user.getId(), "account_disabled", "disabled");
+            authAudit.log("login_failure", user.getId(), "account_disabled", "disabled");
             throw new AccountDisabledException("Account disabled");
         }
 
@@ -96,9 +92,9 @@ public class AuthService {
             boolean lockTriggered = recordFailure(user, now);
             loginMetric("failure");
             if (lockTriggered) {
-                audit("account_locked", user.getId(), "max_failed_attempts", "locked");
+                authAudit.log("account_locked", user.getId(), "max_failed_attempts", "locked");
             } else {
-                audit("login_failure", user.getId(), "invalid_credentials", "failure");
+                authAudit.log("login_failure", user.getId(), "invalid_credentials", "failure");
             }
             throw new InvalidCredentialsException("Invalid credentials");
         }
@@ -106,7 +102,7 @@ public class AuthService {
         user.setFailedLoginCount(0);
         user.setLockedUntil(null);
         loginMetric("success");
-        audit("login_success", user.getId(), "ok", "success");
+        authAudit.log("login_success", user.getId(), "ok", "success");
 
         return user;
     }
@@ -144,23 +140,5 @@ public class AuthService {
     private void loginMetric(String outcome) {
 
         meterRegistry.counter("auth_login_total", "outcome", outcome).increment();
-    }
-
-    private void audit(String event, Object userId, String reason, String outcome) {
-
-        audit.info(
-                "AUDIT event={} userId={} timestamp={} sourceIp={} outcome={} reason={}",
-                event,
-                userId,
-                Instant.now(),
-                sourceIp(),
-                outcome,
-                reason);
-    }
-
-    private String sourceIp() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-
-        return attributes == null ? "unknown" : attributes.getRequest().getRemoteAddr();
     }
 }

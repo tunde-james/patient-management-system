@@ -50,4 +50,32 @@ public class GlobalExceptionHandler extends GlobalExceptionHandlerBase {
 
         return problemDetails.response(HttpStatus.LOCKED, problemDetail);
     }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidRefreshToken(
+            InvalidRefreshTokenException ex, HttpServletRequest request) {
+
+        ProblemDetail problemDetail = problemDetails.of(
+                HttpStatus.UNAUTHORIZED,
+                "invalid-refresh-token",
+                "Invalid refresh token",
+                ex.getMessage(),
+                request.getRequestURI());
+
+        return problemDetails.response(HttpStatus.UNAUTHORIZED, problemDetail);
+    }
+
+    @ExceptionHandler(InvalidAccessTokenException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidAccessToken(
+            InvalidAccessTokenException ex, HttpServletRequest request) {
+
+        ProblemDetail problemDetail = problemDetails.of(
+                HttpStatus.UNAUTHORIZED,
+                "invalid-access-token",
+                "Invalid access token",
+                ex.getMessage(),
+                request.getRequestURI());
+
+        return problemDetails.response(HttpStatus.UNAUTHORIZED, problemDetail);
+    }
 }

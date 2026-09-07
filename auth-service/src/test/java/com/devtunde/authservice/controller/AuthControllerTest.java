@@ -21,9 +21,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import com.devtunde.authservice.config.RefreshProperties;
 import com.devtunde.authservice.model.User;
 import com.devtunde.authservice.service.AuthService;
 import com.devtunde.authservice.service.JwtService;
+import com.devtunde.authservice.service.RefreshTokenService;
+import com.devtunde.authservice.web.AuthCookieFactory;
 import com.devtunde.common.exception.EmailAlreadyExistsException;
 
 @WebMvcTest(AuthController.class)
@@ -39,6 +42,15 @@ class AuthControllerTest {
 
     @MockitoBean
     private JwtService jwtService;
+
+    @MockitoBean
+    private RefreshTokenService refreshTokenService;
+
+    @MockitoBean
+    private RefreshProperties refreshProperties;
+
+    @MockitoBean
+    private AuthCookieFactory cookies;
 
     private static User userWithId(UUID id, String email) {
         User user = new User(email, "{argon2}irrelevant-hash-in-slice");
