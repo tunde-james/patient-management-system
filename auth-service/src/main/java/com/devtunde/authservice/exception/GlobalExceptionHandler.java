@@ -78,4 +78,13 @@ public class GlobalExceptionHandler extends GlobalExceptionHandlerBase {
 
         return problemDetails.response(HttpStatus.UNAUTHORIZED, problemDetail);
     }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleUserNotFound(UserNotFoundException ex, HttpServletRequest request) {
+
+        ProblemDetail problemDetail = problemDetails.of(
+                HttpStatus.NOT_FOUND, "user-not-found", "User not found", ex.getMessage(), request.getRequestURI());
+
+        return problemDetails.response(HttpStatus.NOT_FOUND, problemDetail);
+    }
 }

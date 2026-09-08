@@ -7,6 +7,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.devtunde.authservice.exception.UserNotFoundException;
 import com.devtunde.authservice.model.User;
 import com.devtunde.authservice.repository.UserRepository;
 import com.devtunde.common.exception.EmailAlreadyExistsException;
@@ -54,5 +55,17 @@ public class UserService {
     public boolean existsByRole(String role) {
 
         return userRepository.existsByRole(role);
+    }
+
+    @Transactional
+    public void unlock(UUID userId) {
+
+        User user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        user.setLockedUntil(null);
+        user.setFailedLoginCount(0);
+        user.setFailedWindowStartedAt(null);
+
+        userRepository.save(user);
     }
 }
