@@ -25,11 +25,20 @@ public class UserService {
     @Transactional
     public User create(String email, String rawPassword) {
 
+        return create(email, rawPassword, "ROLE_USER");
+    }
+
+    @Transactional
+    public User create(String email, String rawPassword, String role) {
+
         if (userRepository.findByEmail(email).isPresent()) {
             throw new EmailAlreadyExistsException("Email already registered");
         }
 
-        return userRepository.save(new User(email, passwordEncoder.encode(rawPassword)));
+        User user = new User(email, passwordEncoder.encode(rawPassword));
+        user.setRole(role);
+
+        return userRepository.save(user);
     }
 
     public Optional<User> findByEmail(String email) {
@@ -40,5 +49,10 @@ public class UserService {
     public Optional<User> findById(UUID id) {
 
         return userRepository.findById(id);
+    }
+
+    public boolean existsByRole(String role) {
+
+        return userRepository.existsByRole(role);
     }
 }

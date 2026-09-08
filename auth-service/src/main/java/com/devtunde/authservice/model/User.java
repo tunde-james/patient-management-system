@@ -92,6 +92,10 @@ public class User {
         this.enabled = enabled;
     }
 
+    public void setRole(String role) {
+        this.role = role;
+    }
+
     public Instant getLockedUntil() {
         return lockedUntil;
     }

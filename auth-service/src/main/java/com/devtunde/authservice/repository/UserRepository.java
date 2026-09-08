@@ -10,4 +10,6 @@ import com.devtunde.authservice.model.User;
 public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByEmail(String email);
+
+    boolean existsByRole(String role);
 }
