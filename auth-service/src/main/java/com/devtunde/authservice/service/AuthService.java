@@ -13,45 +13,35 @@ import com.devtunde.authservice.dto.RegisterReqDto;
 import com.devtunde.authservice.exception.AccountDisabledException;
 import com.devtunde.authservice.exception.AccountLockedException;
 import com.devtunde.authservice.exception.InvalidCredentialsException;
-import com.devtunde.authservice.mapper.UserMapper;
 import com.devtunde.authservice.model.User;
-import com.devtunde.authservice.repository.UserRepository;
-import com.devtunde.common.exception.EmailAlreadyExistsException;
 import io.micrometer.core.instrument.MeterRegistry;
 
 @Service
 public class AuthService {
 
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final MeterRegistry meterRegistry;
     private final LockoutProperties lockout;
     private final AuthAudit authAudit;
 
     public AuthService(
-            UserRepository userRepository,
+            UserService userService,
             PasswordEncoder passwordEncoder,
             MeterRegistry meterRegistry,
             LockoutProperties lockout,
             AuthAudit authAudit) {
 
-        this.userRepository = userRepository;
+        this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.meterRegistry = meterRegistry;
         this.lockout = lockout;
         this.authAudit = authAudit;
     }
 
-    @Transactional
     public User register(RegisterReqDto reqDto) {
 
-        if (userRepository.findByEmail(reqDto.email()).isPresent()) {
-            throw new EmailAlreadyExistsException("Email already registered");
-        }
-
-        String hash = passwordEncoder.encode(reqDto.password());
-
-        return userRepository.save(UserMapper.toModel(reqDto, hash));
+        return userService.create(reqDto.email(), reqDto.password());
     }
 
     @Transactional(
@@ -64,7 +54,7 @@ public class AuthService {
 
         Instant now = Instant.now();
 
-        Optional<User> optionalUser = userRepository.findByEmail(reqDto.email());
+        Optional<User> optionalUser = userService.findByEmail(reqDto.email());
 
         if (optionalUser.isEmpty()) {
             loginMetric("failure");
@@ -83,7 +73,7 @@ public class AuthService {
 
         if (!user.isEnabled()) {
             loginMetric("disabled");
-            authAudit.log("login_failure", user.getId(), "account_disabled", "disabled");
+            authAudit.log("login_failure", user.getId(), "account_disabled", "failure");
             throw new AccountDisabledException("Account disabled");
         }
 

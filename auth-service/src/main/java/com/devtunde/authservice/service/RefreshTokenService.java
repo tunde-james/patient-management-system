@@ -20,7 +20,6 @@ import com.devtunde.authservice.config.RefreshProperties;
 import com.devtunde.authservice.exception.InvalidAccessTokenException;
 import com.devtunde.authservice.exception.InvalidRefreshTokenException;
 import com.devtunde.authservice.model.User;
-import com.devtunde.authservice.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -32,17 +31,17 @@ public class RefreshTokenService {
     public static final String FAMILY_KEY_PREFIX = "auth:refresh:family:";
     public static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final StringRedisTemplate redis;
     private final RefreshProperties refresh;
     private final SecureRandom random = new SecureRandom();
     private final AuthAudit authAudit;
 
     public RefreshTokenService(
-            StringRedisTemplate redis, RefreshProperties refresh, UserRepository userRepository, AuthAudit authAudit) {
+            StringRedisTemplate redis, RefreshProperties refresh, UserService userService, AuthAudit authAudit) {
         this.redis = redis;
         this.refresh = refresh;
-        this.userRepository = userRepository;
+        this.userService = userService;
         this.authAudit = authAudit;
     }
 
@@ -131,7 +130,7 @@ public class RefreshTokenService {
         redis.opsForValue().set(TOKEN_KEY_PREFIX + newHash, newRecord, refresh.rollingTtl());
         redis.opsForValue().set(familyKey, newHash, refresh.absoluteTtl());
 
-        User user = userRepository
+        User user = userService
                 .findById(userId)
                 .orElseThrow(() -> new InvalidRefreshTokenException("Token owner no longer exists"));
 
