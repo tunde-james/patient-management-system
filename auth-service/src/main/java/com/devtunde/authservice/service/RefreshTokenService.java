@@ -86,13 +86,22 @@ public class RefreshTokenService {
         String familyId = record.get("familyId").asString();
         String familyKey = familyKey(userId, familyId);
 
-        if (!hash.equals(redis.opsForValue().get(familyKey))) {
-            String currentHash = redis.opsForValue().get(familyKey);
+        String currentHash = redis.opsForValue().get(familyKey);
+
+        if (currentHash == null) {
+            redis.delete(TOKEN_KEY_PREFIX + hash);
+
+            authAudit.log("refresh_family_revoked", userId, "family_already_revoked", "failure");
+
+            throw new InvalidRefreshTokenException("Invalid refresh token");
+        }
+
+        if (!hash.equals(currentHash)) {
             redis.delete(List.of(familyKey, TOKEN_KEY_PREFIX + hash, TOKEN_KEY_PREFIX + currentHash));
 
             authAudit.log("refresh_reuse_detected", userId, "reused_rotated_token", "failure");
 
-            throw new InvalidRefreshTokenException("Refresh token reuse detected");
+            throw new InvalidRefreshTokenException("Invalid refresh token");
         }
 
         Instant lastRotatedAt = Instant.parse(record.get("lastRotatedAt").asString());
@@ -103,7 +112,7 @@ public class RefreshTokenService {
 
             authAudit.log("refresh_expired", userId, "rolling_window_elapsed", "failure");
 
-            throw new InvalidRefreshTokenException("Refresh token expired");
+            throw new InvalidRefreshTokenException("Invalid refresh token");
         }
 
         if (now.isAfter(absoluteExpiry)) {
@@ -111,7 +120,7 @@ public class RefreshTokenService {
 
             authAudit.log("refresh_expired", userId, "absolute_cap_elapsed", "failure");
 
-            throw new InvalidRefreshTokenException("Refresh token expired");
+            throw new InvalidRefreshTokenException("Invalid refresh token");
         }
 
         String newToken = randomToken();

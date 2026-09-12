@@ -2,6 +2,8 @@ package com.devtunde.authservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,7 +54,11 @@ class AdminAuthorizationTest {
     @Test
     @DisplayName("no Authorization header ->  401")
     void noToken_returns401() throws Exception {
-        mockMvc.perform(post(ADMIN_ENDPOINT)).andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post(ADMIN_ENDPOINT))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("Content-Type", "application/problem+json"))
+                .andExpect(jsonPath("$.title").value("Unauthorized"));
     }
 
     @Test
@@ -61,7 +67,9 @@ class AdminAuthorizationTest {
         String token = loginTokenFor("staff-user@example.com", "ROLE_USER");
 
         mockMvc.perform(post(ADMIN_ENDPOINT).header("Authorization", "Bearer " + token))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(header().string("Content-Type", "application/problem+json"))
+                .andExpect(jsonPath("$.title").value("Forbidden"));
     }
 
     @Test

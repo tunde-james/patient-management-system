@@ -249,6 +249,42 @@ class RefreshTokenLifecycleTest {
             // The family is dead — even the legitimate R2 no longer works:
             refreshWithCookie(r2).andExpect(status().isUnauthorized());
         }
+
+        @Test
+        @DisplayName("replaying a rotated-out token after logout is NOT flagged as reuse (family_revoked)")
+        void replayAfterLogout_notFlaggedAsReuse() throws Exception {
+            String email = uniqueEmail();
+            seedUser(email, "correct-horse-battery");
+            String[] first = loginAndGetCookies(email, "correct-horse-battery");
+
+            // R1 -> R2: family pointer moves to R2; R1's key lingers
+            String r2 = cookieValue(
+                    refreshWithCookie(first[1])
+                            .andExpect(status().isNoContent())
+                            .andReturn(),
+                    "auth_refresh_token");
+
+            // logout kills the family (pointer + current R2 key)
+            logoutWithCookie(first[0], r2).andExpect(status().isNoContent());
+
+            Logger auditLogger = (Logger) LoggerFactory.getLogger("AUDIT");
+            ListAppender<ILoggingEvent> appender = new ListAppender<>();
+            appender.start();
+            auditLogger.addAppender(appender);
+            try {
+                refreshWithCookie(first[1])
+                        .andExpect(status().isUnauthorized())
+                        .andExpect(header().string("Content-Type", MediaType.APPLICATION_PROBLEM_JSON_VALUE));
+
+                assertThat(appender.list)
+                        .anySatisfy(e -> assertThat(e.getFormattedMessage()).contains("event=refresh_family_revoked"));
+                assertThat(appender.list)
+                        .noneSatisfy(e -> assertThat(e.getFormattedMessage()).contains("refresh_reuse_detected"));
+            } finally {
+
+                auditLogger.detachAppender(appender);
+            }
+        }
     }
 
     @Nested
