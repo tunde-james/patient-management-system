@@ -16,8 +16,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.devtunde.authservice.config.RefreshProperties;
+import com.devtunde.authservice.dto.ForgotPasswordReqDto;
 import com.devtunde.authservice.dto.LoginReqDto;
 import com.devtunde.authservice.dto.LoginResDto;
+import com.devtunde.authservice.dto.MessageResDto;
 import com.devtunde.authservice.dto.RefreshReqDto;
 import com.devtunde.authservice.dto.RegisterReqDto;
 import com.devtunde.authservice.dto.RegisterResDto;
@@ -28,6 +30,7 @@ import com.devtunde.authservice.mapper.UserMapper;
 import com.devtunde.authservice.model.User;
 import com.devtunde.authservice.service.AuthService;
 import com.devtunde.authservice.service.JwtService;
+import com.devtunde.authservice.service.PasswordResetService;
 import com.devtunde.authservice.service.RefreshTokenService;
 import com.devtunde.authservice.web.AuthCookieFactory;
 import io.jsonwebtoken.Claims;
@@ -38,22 +41,25 @@ import io.jsonwebtoken.Jws;
 public class AuthController {
 
     private final AuthService authService;
-    private JwtService jwtService;
+    private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final RefreshProperties refreshProperties;
     private final AuthCookieFactory authCookies;
+    private final PasswordResetService passwordResetService;
 
     public AuthController(
             AuthService authService,
             JwtService jwtService,
             RefreshTokenService refreshTokenService,
             RefreshProperties refreshProperties,
-            AuthCookieFactory authCookies) {
+            AuthCookieFactory authCookies,
+            PasswordResetService passwordResetService) {
         this.authService = authService;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
         this.refreshProperties = refreshProperties;
         this.authCookies = authCookies;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/register")
@@ -63,6 +69,14 @@ public class AuthController {
 
         return ResponseEntity.created(URI.create("/api/v1/users/" + user.getId()))
                 .body(UserMapper.toDTO(user));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<MessageResDto> forgotPassword(@Valid @RequestBody ForgotPasswordReqDto reqDto) {
+
+        passwordResetService.requestReset(reqDto.email());
+
+        return ResponseEntity.ok(new MessageResDto("If an account exists, a reset link has been sent."));
     }
 
     @PostMapping("/login")

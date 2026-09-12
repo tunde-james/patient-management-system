@@ -19,7 +19,8 @@ import com.devtunde.authservice.web.ProblemJsonSecurityHandler;
     LockoutProperties.class,
     JwtProperties.class,
     RefreshProperties.class,
-    AdminBootstrapProperties.class
+    AdminBootstrapProperties.class,
+    ResetProperties.class
 })
 public class SecurityConfig {
 
@@ -41,7 +42,8 @@ public class SecurityConfig {
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/token",
                                 "/api/v1/auth/refresh",
-                                "/api/v1/auth/logout")
+                                "/api/v1/auth/logout",
+                                "/api/v1/auth/forgot-password")
                         .permitAll()
                         .requestMatchers("/.well-known/jwks.json")
                         .permitAll()
@@ -55,8 +57,6 @@ public class SecurityConfig {
                         new JwtAuthenticationFilter(jwtService, refreshTokenService),
                         UsernamePasswordAuthenticationFilter.class);
 
-        // Chain-level rejections speak RFC 7807 like the controllers do:
-        // 401 problem+json when no valid token, 403 problem+json when the role is insufficient.
         ProblemJsonSecurityHandler securityHandler = new ProblemJsonSecurityHandler();
         http.exceptionHandling(
                 ex -> ex

@@ -25,6 +25,7 @@ import com.devtunde.authservice.config.RefreshProperties;
 import com.devtunde.authservice.model.User;
 import com.devtunde.authservice.service.AuthService;
 import com.devtunde.authservice.service.JwtService;
+import com.devtunde.authservice.service.PasswordResetService;
 import com.devtunde.authservice.service.RefreshTokenService;
 import com.devtunde.authservice.web.AuthCookieFactory;
 import com.devtunde.common.exception.EmailAlreadyExistsException;
@@ -51,6 +52,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private AuthCookieFactory cookies;
+
+    @MockitoBean
+    private PasswordResetService passwordResetService;
 
     private static User userWithId(UUID id, String email) {
         User user = new User(email, "{argon2}irrelevant-hash-in-slice");

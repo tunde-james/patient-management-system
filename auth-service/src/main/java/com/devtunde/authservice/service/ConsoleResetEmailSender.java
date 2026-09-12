@@ -1,0 +1,19 @@
+package com.devtunde.authservice.service;
+
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+@Component
+@Profile({"dev", "test", "default"})
+public class ConsoleResetEmailSender implements ResetEmailSender {
+
+    private static final Logger log = LoggerFactory.getLogger(ConsoleResetEmailSender.class);
+
+    @Override
+    public void send(String email, String resetLink) {
+        log.info("password-reset email to={} subject=Password reset link={}", email, resetLink);
+    }
+}

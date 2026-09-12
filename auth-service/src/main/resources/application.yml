@@ -28,6 +28,9 @@ auth:
   refresh:
     rolling-ttl: 7d
     absolute-ttl: 30d
+  reset:
+    base-url: ${AUTH_RESET_BASE_URL:http://localhost:5173}
+    token-ttl: 10m
 
 management:
   endpoints:
