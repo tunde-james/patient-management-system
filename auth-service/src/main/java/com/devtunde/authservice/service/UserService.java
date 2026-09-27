@@ -68,4 +68,14 @@ public class UserService {
 
         userRepository.save(user);
     }
+
+    @Transactional
+    public void updatePassword(UUID userId, String rawPassword) {
+
+        User user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
+
+        userRepository.save(user);
+    }
 }

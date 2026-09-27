@@ -79,6 +79,34 @@ public class GlobalExceptionHandler extends GlobalExceptionHandlerBase {
         return problemDetails.response(HttpStatus.UNAUTHORIZED, problemDetail);
     }
 
+    @ExceptionHandler(InvalidResetTokenException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidResetToken(
+            InvalidResetTokenException ex, HttpServletRequest request) {
+
+        ProblemDetail problemDetail = problemDetails.of(
+                HttpStatus.BAD_REQUEST,
+                "invalid-reset-token",
+                "Invalid reset token",
+                ex.getMessage(),
+                request.getRequestURI());
+
+        return problemDetails.response(HttpStatus.BAD_REQUEST, problemDetail);
+    }
+
+    @ExceptionHandler(BreachedPasswordException.class)
+    public ResponseEntity<ProblemDetail> handleBreachedPassword(
+            BreachedPasswordException ex, HttpServletRequest request) {
+
+        ProblemDetail problemDetail = problemDetails.of(
+                HttpStatus.BAD_REQUEST,
+                "breached-password",
+                "Breached password",
+                ex.getMessage(),
+                request.getRequestURI());
+
+        return problemDetails.response(HttpStatus.BAD_REQUEST, problemDetail);
+    }
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleUserNotFound(UserNotFoundException ex, HttpServletRequest request) {
 

@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -56,6 +58,7 @@ class PasswordResetFlowTest {
     static void redisProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.redis.host", () -> redis.getRedisHost());
         registry.add("spring.data.redis.port", () -> redis.getRedisPort());
+        registry.add("auth.security.breached-password-check.base-url", () -> "http://localhost:1");
     }
 
     @Autowired
@@ -197,5 +200,128 @@ class PasswordResetFlowTest {
                 .isNull();
         assertThat(redisTemplate.opsForValue().get(PasswordResetService.TOKEN_KEY_PREFIX + sha256Hex(secondToken)))
                 .isNotNull();
+    }
+
+    private static final String RESET = "/api/v1/auth/reset-password";
+
+    private String resetBody(String token, String newPassword) {
+        return """
+                   {
+                       "token":"%s",
+                       "newPassword":"%s"
+                   }
+                   """.formatted(token, newPassword);
+    }
+
+    private int loginStatus(String email, String password) throws Exception {
+        return mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                    {
+                                        "email":"%s",
+                                        "password":"%s"
+                                    }
+                                """.formatted(email, password)))
+                .andReturn()
+                .getResponse()
+                .getStatus();
+    }
+
+    @Test
+    @DisplayName("successful reset: old password dead, new password works, live session killed")
+    void resetPassword_success_revokesSessionsAndOldPassword() throws Exception {
+        String email = "reset-success-" + UUID.randomUUID() + "@example.com";
+        User user = seedUser(email);
+
+        assertThat(loginStatus(email, "pass-word-1234")).isEqualTo(200);
+
+        String rawToken = captureResetToken(email);
+
+        mockMvc.perform(post(RESET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(resetBody(rawToken, "new-pass-word-5678")))
+                .andExpect(status().isOk());
+
+        try (var families = redisTemplate.scan(ScanOptions.scanOptions()
+                .match("auth:refresh:family:" + user.getId() + ":*")
+                .build())) {
+
+            assertThat(families.hasNext()).isFalse();
+        }
+
+        assertThat(loginStatus(email, "pass-word-1234")).isEqualTo(401);
+        assertThat(loginStatus(email, "new-pass-word-5678")).isEqualTo(200);
+    }
+
+    @Test
+    @DisplayName("a reset token works exactly once — second submit gets 400")
+    void resetToken_singleUse() throws Exception {
+        String email = "single-use-" + UUID.randomUUID() + "@example.com";
+        seedUser(email);
+
+        String rawToken = captureResetToken(email);
+
+        mockMvc.perform(post(RESET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(resetBody(rawToken, "brand-new-pass-1")))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post(RESET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(resetBody(rawToken, "brand-new-pass-2")))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("an expired reset token is rejected with 400")
+    void resetToken_expired_rejected() throws Exception {
+        String email = "expired-" + UUID.randomUUID() + "@example.com";
+        seedUser(email);
+
+        String rawToken = captureResetToken(email);
+
+        redisTemplate.expire(PasswordResetService.TOKEN_KEY_PREFIX + sha256Hex(rawToken), Duration.ofMillis(500));
+
+        Thread.sleep(750);
+
+        mockMvc.perform(post(RESET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(resetBody(rawToken, "some-new-pass-99")))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("a garbage token is rejected with 400")
+    void resetToken_unknown_rejected() throws Exception {
+        mockMvc.perform(post(RESET)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(resetBody("f".repeat(64), "some-new-pass-99")))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("neither raw nor hashed reset token ever reaches the AUDIT log")
+    void resetToken_neverInAuditLog() throws Exception {
+        String email = "audit-" + UUID.randomUUID() + "@example.com";
+        seedUser(email);
+
+        Logger auditLogger = (Logger) LoggerFactory.getLogger("AUDIT");
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        auditLogger.addAppender(appender);
+        try {
+            String rawToken = captureResetToken(email);
+            String hash = sha256Hex(rawToken);
+
+            mockMvc.perform(post(RESET)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(resetBody(rawToken, "audit-clean-pass-1")))
+                    .andExpect(status().isOk());
+
+            assertThat(appender.list.stream().map(ILoggingEvent::getFormattedMessage))
+                    .noneMatch(message -> message.contains(rawToken) || message.contains(hash));
+        } finally {
+            auditLogger.detachAppender(appender);
+        }
     }
 }

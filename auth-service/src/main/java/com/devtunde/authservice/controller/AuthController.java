@@ -23,6 +23,7 @@ import com.devtunde.authservice.dto.MessageResDto;
 import com.devtunde.authservice.dto.RefreshReqDto;
 import com.devtunde.authservice.dto.RegisterReqDto;
 import com.devtunde.authservice.dto.RegisterResDto;
+import com.devtunde.authservice.dto.ResetPasswordReqDto;
 import com.devtunde.authservice.dto.TokenResDto;
 import com.devtunde.authservice.exception.InvalidAccessTokenException;
 import com.devtunde.authservice.exception.InvalidRefreshTokenException;
@@ -69,14 +70,6 @@ public class AuthController {
 
         return ResponseEntity.created(URI.create("/api/v1/users/" + user.getId()))
                 .body(UserMapper.toDTO(user));
-    }
-
-    @PostMapping("/forgot-password")
-    public ResponseEntity<MessageResDto> forgotPassword(@Valid @RequestBody ForgotPasswordReqDto reqDto) {
-
-        passwordResetService.requestReset(reqDto.email());
-
-        return ResponseEntity.ok(new MessageResDto("If an account exists, a reset link has been sent."));
     }
 
     @PostMapping("/login")
@@ -160,6 +153,22 @@ public class AuthController {
         }
 
         throw new InvalidRefreshTokenException("Missing refresh token");
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<MessageResDto> forgotPassword(@Valid @RequestBody ForgotPasswordReqDto reqDto) {
+
+        passwordResetService.requestReset(reqDto.email());
+
+        return ResponseEntity.ok(new MessageResDto("If an account exists, a reset link has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<MessageResDto> resetPassword(@Valid @RequestBody ResetPasswordReqDto reqDto) {
+
+        passwordResetService.completeReset(reqDto.token(), reqDto.newPassword());
+
+        return ResponseEntity.ok(new MessageResDto("Password has been reset successfully."));
     }
 
     @PostMapping("/logout")

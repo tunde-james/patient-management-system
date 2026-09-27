@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.HexFormat;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.devtunde.authservice.config.ResetProperties;
+import com.devtunde.authservice.exception.BreachedPasswordException;
+import com.devtunde.authservice.exception.InvalidResetTokenException;
 import com.devtunde.authservice.model.User;
 
 @Service
@@ -28,15 +31,26 @@ public class PasswordResetService {
     private final UserService userService;
     private final ResetEmailSender emailSender;
     private final ResetProperties reset;
+    private final RefreshTokenService refreshTokenService;
+    private final AuthAudit auAuthAudit;
+    BreachedPasswordChecker breachedPasswordChecker;
     private final SecureRandom random = new SecureRandom();
 
     public PasswordResetService(
-            StringRedisTemplate redis, UserService userService, ResetEmailSender emailSender, ResetProperties reset) {
-
+            StringRedisTemplate redis,
+            UserService userService,
+            ResetEmailSender emailSender,
+            ResetProperties reset,
+            RefreshTokenService refreshTokenService,
+            AuthAudit auAuthAudit,
+            BreachedPasswordChecker breachedPasswordChecker) {
         this.redis = redis;
         this.userService = userService;
         this.emailSender = emailSender;
         this.reset = reset;
+        this.refreshTokenService = refreshTokenService;
+        this.auAuthAudit = auAuthAudit;
+        this.breachedPasswordChecker = breachedPasswordChecker;
     }
 
     public void requestReset(String email) {
@@ -65,6 +79,28 @@ public class PasswordResetService {
         } catch (Exception ex) {
             log.warn("password-reset email failed to send for user {}", user.getId());
         }
+    }
+
+    public void completeReset(String rawToken, String newPassword) {
+
+        if (breachedPasswordChecker.isBreached(newPassword)) {
+            throw new BreachedPasswordException("This password has appeared in a data breach; choose another.");
+        }
+
+        String hash = sha256Hex(rawToken);
+        String userId = redis.opsForValue().get(TOKEN_KEY_PREFIX + hash);
+
+        if (userId == null) {
+            throw new InvalidResetTokenException("Invalid reset token");
+        }
+
+        redis.delete(TOKEN_KEY_PREFIX + hash);
+        redis.delete(USER_POINTER_PREFIX + userId);
+
+        userService.updatePassword(UUID.fromString(userId), newPassword);
+        refreshTokenService.revokeAllSessions(UUID.fromString(userId));
+
+        auAuthAudit.log("password_reset_completed", userId, "reset_token_verified", "success");
     }
 
     private String randomHexToken() {
