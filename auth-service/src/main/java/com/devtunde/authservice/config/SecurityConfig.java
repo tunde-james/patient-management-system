@@ -20,7 +20,8 @@ import com.devtunde.authservice.web.ProblemJsonSecurityHandler;
     JwtProperties.class,
     RefreshProperties.class,
     AdminBootstrapProperties.class,
-    ResetProperties.class
+    ResetProperties.class,
+    BreachedPasswordProperties.class
 })
 public class SecurityConfig {
 
@@ -43,7 +44,8 @@ public class SecurityConfig {
                                 "/api/v1/auth/token",
                                 "/api/v1/auth/refresh",
                                 "/api/v1/auth/logout",
-                                "/api/v1/auth/forgot-password")
+                                "/api/v1/auth/forgot-password",
+                                "/api/v1/auth/reset-password")
                         .permitAll()
                         .requestMatchers("/.well-known/jwks.json")
                         .permitAll()
@@ -59,9 +61,7 @@ public class SecurityConfig {
 
         ProblemJsonSecurityHandler securityHandler = new ProblemJsonSecurityHandler();
         http.exceptionHandling(
-                ex -> ex
-                        .authenticationEntryPoint(securityHandler)
-                        .accessDeniedHandler(securityHandler));
+                ex -> ex.authenticationEntryPoint(securityHandler).accessDeniedHandler(securityHandler));
 
         return http.build();
     }

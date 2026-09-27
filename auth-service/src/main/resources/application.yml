@@ -16,13 +16,15 @@ spring:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: ${SPRING_DATA_REDIS_PORT:6379}
 
-
 auth:
   security:
     lockout:
       max-attempts: 5
       lock-duration: 15m
       quiet-window: 1h
+    breached-password-check:
+      enabled: true
+      base-url: ${HIBP_BASE_URL:https://api.pwnedpasswords.com}
   jwt:
     access-token-ttl: 15m
   refresh:
@@ -31,6 +33,9 @@ auth:
   reset:
     base-url: ${AUTH_RESET_BASE_URL:http://localhost:5173}
     token-ttl: 10m
+    from: ${AUTH_RESET_FROM:noreply@example.com}
+    subject: ${AUTH_RESET_SUBJECT:Password reset}
+    text: "${AUTH_RESET_TEXT:Use the link below to reset your password.\n\n%link%\n\nThis link expires in %minutes% minutes. If you did not request a password reset, you can ignore this email.}"
 
 management:
   endpoints:

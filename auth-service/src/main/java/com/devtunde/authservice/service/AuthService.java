@@ -12,6 +12,7 @@ import com.devtunde.authservice.dto.LoginReqDto;
 import com.devtunde.authservice.dto.RegisterReqDto;
 import com.devtunde.authservice.exception.AccountDisabledException;
 import com.devtunde.authservice.exception.AccountLockedException;
+import com.devtunde.authservice.exception.BreachedPasswordException;
 import com.devtunde.authservice.exception.InvalidCredentialsException;
 import com.devtunde.authservice.model.User;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -24,22 +25,29 @@ public class AuthService {
     private final MeterRegistry meterRegistry;
     private final LockoutProperties lockout;
     private final AuthAudit authAudit;
+    private final BreachedPasswordChecker breachedPasswordChecker;
 
     public AuthService(
             UserService userService,
             PasswordEncoder passwordEncoder,
             MeterRegistry meterRegistry,
             LockoutProperties lockout,
-            AuthAudit authAudit) {
+            AuthAudit authAudit,
+            BreachedPasswordChecker breachedPasswordChecker) {
 
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.meterRegistry = meterRegistry;
         this.lockout = lockout;
         this.authAudit = authAudit;
+        this.breachedPasswordChecker = breachedPasswordChecker;
     }
 
     public User register(RegisterReqDto reqDto) {
+
+        if (breachedPasswordChecker.isBreached(reqDto.password())) {
+            throw new BreachedPasswordException("This password has appeared in a data breach; choose another.");
+        }
 
         return userService.create(reqDto.email(), reqDto.password());
     }
