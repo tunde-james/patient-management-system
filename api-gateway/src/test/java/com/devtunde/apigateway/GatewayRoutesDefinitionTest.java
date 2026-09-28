@@ -32,7 +32,9 @@ class GatewayRoutesDefinitionTest {
                 .containsExactlyInAnyOrder(
                         "patient-service-route",
                         "analytics-service-route",
+                        "auth-service-route",
                         "api-docs-patient-route",
-                        "api-docs-analytics-route");
+                        "api-docs-analytics-route",
+                        "api-docs-auth-route");
     }
 }
