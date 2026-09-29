@@ -88,13 +88,12 @@ public class PasswordResetService {
         }
 
         String hash = sha256Hex(rawToken);
-        String userId = redis.opsForValue().get(TOKEN_KEY_PREFIX + hash);
+        String userId = redis.opsForValue().getAndDelete(TOKEN_KEY_PREFIX + hash);
 
         if (userId == null) {
             throw new InvalidResetTokenException("Invalid reset token");
         }
 
-        redis.delete(TOKEN_KEY_PREFIX + hash);
         redis.delete(USER_POINTER_PREFIX + userId);
 
         userService.updatePassword(UUID.fromString(userId), newPassword);

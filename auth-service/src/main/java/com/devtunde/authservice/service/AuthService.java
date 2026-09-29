@@ -62,7 +62,7 @@ public class AuthService {
 
         Instant now = Instant.now();
 
-        Optional<User> optionalUser = userService.findByEmail(reqDto.email());
+        Optional<User> optionalUser = userService.findByEmailForUpdate(reqDto.email());
 
         if (optionalUser.isEmpty()) {
             loginMetric("failure");
@@ -99,6 +99,7 @@ public class AuthService {
 
         user.setFailedLoginCount(0);
         user.setLockedUntil(null);
+        user.setFailedWindowStartedAt(null);
         loginMetric("success");
         authAudit.log("login_success", user.getId(), "ok", "success");
 

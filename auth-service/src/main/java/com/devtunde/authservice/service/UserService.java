@@ -1,8 +1,10 @@
 package com.devtunde.authservice.service;
 
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,19 +34,31 @@ public class UserService {
     @Transactional
     public User create(String email, String rawPassword, String role) {
 
-        if (userRepository.findByEmail(email).isPresent()) {
+        String normalized = normalizedEmail(email);
+
+        if (userRepository.findByEmail(normalized).isPresent()) {
             throw new EmailAlreadyExistsException("Email already registered");
         }
 
-        User user = new User(email, passwordEncoder.encode(rawPassword));
+        User user = new User(normalized, passwordEncoder.encode(rawPassword));
         user.setRole(role);
 
-        return userRepository.save(user);
+        try {
+            return userRepository.saveAndFlush(user);
+
+        } catch (DataIntegrityViolationException ex) {
+            throw new EmailAlreadyExistsException("Email already registered");
+        }
+    }
+
+    public Optional<User> findByEmailForUpdate(String email) {
+
+        return userRepository.findByEmailForUpdate(normalizedEmail(email));
     }
 
     public Optional<User> findByEmail(String email) {
 
-        return userRepository.findByEmail(email);
+        return userRepository.findByEmail(normalizedEmail(email));
     }
 
     public Optional<User> findById(UUID id) {
@@ -77,5 +91,9 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
 
         userRepository.save(user);
+    }
+
+    private static String normalizedEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 }
