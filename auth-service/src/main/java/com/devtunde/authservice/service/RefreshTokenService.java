@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.UUID;
 
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import com.devtunde.authservice.config.RefreshProperties;
@@ -30,6 +32,14 @@ public class RefreshTokenService {
     public static final String TOKEN_KEY_PREFIX = "auth:refresh:token:";
     public static final String FAMILY_KEY_PREFIX = "auth:refresh:family:";
     public static final String BLACKLIST_PREFIX = "jwt:blacklist:";
+    private static final DefaultRedisScript<Long> ROTATE_SCRIPT = new DefaultRedisScript<>("""
+                if redis.call('GET', KEYS[1]) ~= ARGV[1]
+                then return 0
+                end
+                redis.call('SET', KEYS[2], ARGV[2], 'EX', tonumber(ARGV[3]))
+                redis.call('SET', KEYS[1], ARGV[4], 'EX', tonumber(ARGV[5]))
+                return 1
+            """, Long.class);
 
     private final UserService userService;
     private final StringRedisTemplate redis;
@@ -136,8 +146,29 @@ public class RefreshTokenService {
                 }
             """.formatted(userId, familyId, record.get("createdAt").asString(), now, absoluteExpiry);
 
-        redis.opsForValue().set(TOKEN_KEY_PREFIX + newHash, newRecord, refresh.rollingTtl());
-        redis.opsForValue().set(familyKey, newHash, refresh.absoluteTtl());
+        Long swapped = redis.execute(
+                ROTATE_SCRIPT,
+                List.of(familyKey, TOKEN_KEY_PREFIX + newHash),
+                currentHash,
+                newRecord,
+                String.valueOf(refresh.rollingTtl().toSeconds()),
+                newHash,
+                String.valueOf(refresh.absoluteTtl().toSeconds()));
+
+        if (swapped == null || swapped == 0L) {
+            String winnerHash = redis.opsForValue().get(familyKey);
+            List<String> revokeKeys = new ArrayList<>(List.of(familyKey, TOKEN_KEY_PREFIX + hash));
+
+            if (winnerHash != null) {
+                revokeKeys.add(TOKEN_KEY_PREFIX + winnerHash);
+            }
+
+            redis.delete(revokeKeys);
+
+            authAudit.log("refresh_reuse_detected", userId, "concurrent_rotation_race", "failure");
+
+            throw new InvalidRefreshTokenException("Invalid refresh token");
+        }
 
         User user = userService
                 .findById(userId)
