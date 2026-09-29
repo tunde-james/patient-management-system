@@ -5,4 +5,4 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "auth.jwt")
-public record JwtProperties(Duration accessTokenTtl) {}
+public record JwtProperties(Duration accessTokenTtl, String privateKey) {}
