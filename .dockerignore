@@ -1,0 +1,8 @@
+.git
+.github
+.vscode
+.continue
+.scratch
+**/target
+.env
+.env.local

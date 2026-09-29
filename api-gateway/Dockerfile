@@ -23,7 +23,7 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
-COPY --from=builder --chown=appuser:appgroup /app/target/*.jar app.jar
+COPY --from=builder --chown=appuser:appgroup /app/target/api-gateway-0.0.1-SNAPSHOT.jar ./app.jar
 
 COPY --chown=appuser:appgroup docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh

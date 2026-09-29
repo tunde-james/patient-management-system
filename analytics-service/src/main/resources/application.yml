@@ -1,10 +1,13 @@
 spring: 
   application:
     name: analytics-service
+  output:
+    ansi:
+      enabled: ALWAYS
   datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/analytics_db}
+    username: ${SPRING_DATASOURCE_USERNAME:analytics_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
   jpa:
     hibernate:
       ddl-auto: validate

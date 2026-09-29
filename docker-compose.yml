@@ -54,6 +54,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+
+  auth-service-db:
+    image: postgres:17
+    container_name: auth-service-db
+    environment:
+      POSTGRES_USER: ${AUTH_SERVICE_DB_USER}
+      POSTGRES_PASSWORD: ${AUTH_SERVICE_DB_PASSWORD}
+      POSTGRES_DB: ${AUTH_SERVICE_DB_NAME}
+    ports: []
+    volumes:
+      - auth-service-db-data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_SERVICE_DB_USER} -d ${AUTH_SERVICE_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
       start_period: 30s 
 
   kafka:
@@ -150,6 +169,32 @@ services:
       timeout: 5s
       retries: 5
       start_period: 40s
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    image: auth-service:latest
+    container_name: auth-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-service-db:5432/${AUTH_SERVICE_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${AUTH_SERVICE_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${AUTH_SERVICE_DB_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_SQL_INIT_MODE: always
+      # BILLING_SERVICE_ADDRESS: billing-service
+      # SPRING_KAFKA_BOOTSTRAP_SERVERS: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+    networks:
+      - internal
+    depends_on:
+      auth-service-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4003/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
   
   api-gateway:
     build:
@@ -176,6 +221,7 @@ services:
 volumes:
   patient-service-db-data:
   billing-service-db-data:
+  auth-service-db-data:
   analytics-service-db-data:
   kafka-data:
 

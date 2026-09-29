@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -24,6 +25,7 @@ import com.sun.net.httpserver.HttpServer;
 class GatewayTimeoutIntegrationTest {
 
     private static HttpServer silentDownstream;
+    private static final AtomicBoolean SHUTDOWN = new AtomicBoolean(false);
 
     @DynamicPropertySource
     static void pointRouteAtSilentDownstream(DynamicPropertyRegistry registry) {
@@ -32,7 +34,9 @@ class GatewayTimeoutIntegrationTest {
 
             silentDownstream.createContext("/", exchange -> {
                 try {
-                    Thread.sleep(Duration.ofMinutes(5).toMillis());
+                    while (!SHUTDOWN.get()) {
+                        Thread.sleep(200);
+                    }
                 } catch (InterruptedException ignored) {
                     Thread.currentThread().interrupt();
                 }
@@ -55,6 +59,8 @@ class GatewayTimeoutIntegrationTest {
 
     @AfterAll
     static void stopSilentDownstream() {
+        SHUTDOWN.set(true);
+
         if (silentDownstream != null) {
             silentDownstream.stop(0);
         }

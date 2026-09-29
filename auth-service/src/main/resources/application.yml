@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: auth-service
+  output:
+    ansi:
+      enabled: ALWAYS
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5003/auth_db}
+    username: ${AUTH_SERVICE_DB_USER:admin_user}
+    password: ${AUTH_SERVICE_DB_PASSWORD:password}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+auth:
+  security:
+    lockout:
+      max-attempts: 5
+      lock-duration: 15m
+      quiet-window: 1h
+    breached-password-check:
+      enabled: true
+      base-url: ${HIBP_BASE_URL:https://api.pwnedpasswords.com}
+  jwt:
+    access-token-ttl: 15m
+    private-key: ${AUTH_JWT_PRIVATE_KEY:}
+  cookie:
+    secure: ${AUTH_COOKIE_SECURE:true}
+  refresh:
+    rolling-ttl: 7d
+    absolute-ttl: 30d
+  reset:
+    base-url: ${AUTH_RESET_BASE_URL:http://localhost:5173}
+    token-ttl: 10m
+    from: ${AUTH_RESET_FROM:noreply@example.com}
+    subject: ${AUTH_RESET_SUBJECT:Password reset}
+    text: "${AUTH_RESET_TEXT:Use the link below to reset your password.\n\n%link%\n\nThis link expires in %minutes% minutes. If you did not request a password reset, you can ignore this email.}"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+server:
+  port: 4003
+
+logging:
+  level:
+    root: INFO
