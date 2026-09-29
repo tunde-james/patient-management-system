@@ -27,7 +27,8 @@ public class BreachedPasswordChecker {
 
     public BreachedPasswordChecker(BreachedPasswordProperties properties) {
         this.properties = properties;
-        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(HttpClient.newHttpClient());
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build());
         requestFactory.setReadTimeout(Duration.ofSeconds(2));
         this.restClient = RestClient.builder().requestFactory(requestFactory).build();
     }

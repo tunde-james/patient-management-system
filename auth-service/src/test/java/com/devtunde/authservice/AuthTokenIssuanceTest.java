@@ -21,6 +21,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
@@ -47,6 +48,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Testcontainers
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 @TestPropertySource(properties = "auth.jwt.access-token-ttl=10s")
 class AuthTokenIssuanceTest {
 
@@ -141,7 +143,7 @@ class AuthTokenIssuanceTest {
             assertThat(key.get("kty").asString()).isEqualTo("RSA");
             assertThat(key.get("alg").asString()).isEqualTo("RS256");
             assertThat(key.get("use").asString()).isEqualTo("sig");
-            assertThat(key.get("kid").asString()).isEqualTo("auth-1");
+            assertThat(key.get("kid").asString()).matches("[0-9a-f]{16}");
             assertThat(key.get("n").asString()).isNotBlank();
             assertThat(key.get("e").asString()).isNotBlank();
         }
@@ -167,7 +169,7 @@ class AuthTokenIssuanceTest {
 
             assertThat(jws.getHeader().getAlgorithm()).isEqualTo("RS256");
             Claims claims = jws.getPayload();
-            assertThat(jws.getHeader().get("kid")).isEqualTo("auth-1");
+            assertThat(jws.getHeader().get("kid")).isEqualTo(key.get("kid").asString());
             assertThat(claims.keySet()).containsExactlyInAnyOrder("sub", "jti", "iat", "exp", "roles");
             assertThat(claims.getSubject()).isEqualTo(id.toString());
             assertThat(claims.get("jti", String.class)).isNotBlank();

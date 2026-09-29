@@ -9,7 +9,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +23,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
@@ -39,6 +46,7 @@ import tools.jackson.databind.node.ObjectNode;
 @Testcontainers
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 @TestPropertySource(properties = {"auth.security.lockout.lock-duration=2s", "auth.security.lockout.quiet-window=10s"})
 class AuthLoginLockoutTest {
 
@@ -149,6 +157,39 @@ class AuthLoginLockoutTest {
         assertThat(user.getFailedLoginCount()).isZero();
 
         assertThat(user.getLockedUntil()).isNull();
+    }
+
+    @Test
+    @DisplayName("concurrent failed logins: no increment is lost to a read-modify-write race")
+    void concurrentFailedLogins_everyIncrementPersists() throws Exception {
+
+        String email = uniqueEmail();
+        User seeded = seedUser(email, "correct-horse-battery");
+
+        int attempts = 4;
+        CyclicBarrier barrier = new CyclicBarrier(attempts);
+        ExecutorService pool = Executors.newFixedThreadPool(attempts);
+
+        try {
+            List<Future<?>> done = new ArrayList<>();
+            for (int i = 0; i < attempts; i++) {
+                final int n = i;
+                done.add(pool.submit(() -> {
+                    barrier.await();
+                    login(email, "wrong-password-" + n).andExpect(status().isUnauthorized());
+                    return null;
+                }));
+            }
+            for (Future<?> f : done) {
+                f.get();
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+
+        User user = userRepository.findById(seeded.getId()).orElseThrow();
+
+        assertThat(user.getFailedLoginCount()).isEqualTo(attempts);
     }
 
     @Test

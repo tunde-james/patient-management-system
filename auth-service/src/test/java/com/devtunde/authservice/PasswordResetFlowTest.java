@@ -7,7 +7,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,6 +25,7 @@ import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -42,6 +49,7 @@ import com.redis.testcontainers.RedisContainer;
 @Testcontainers
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 class PasswordResetFlowTest {
 
     private static final String FORGOT = "/api/v1/auth/forgot-password";
@@ -297,6 +305,49 @@ class PasswordResetFlowTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(resetBody("f".repeat(64), "some-new-pass-99")))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("four synchronized redeem attempts with one token: exactly one wins")
+    void resetToken_concurrentRedemption_exactlyOneSucceeds() throws Exception {
+
+        String email = "concurrent-" + UUID.randomUUID() + "@example.com";
+        seedUser(email);
+        String token = captureResetToken(email);
+
+        int workers = 4;
+        CyclicBarrier barrier = new CyclicBarrier(workers);
+        ExecutorService pool = Executors.newFixedThreadPool(workers);
+
+        try {
+            List<Future<Integer>> results = new ArrayList<>();
+            for (int i = 0; i < workers; i++) {
+                results.add(pool.submit(() -> {
+                    barrier.await();
+                    return mockMvc.perform(post("/api/v1/auth/reset-password")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content("""
+                                        {
+                                            "token":"%s",
+                                            "newPassword":"fresh-password-1"
+                                        }
+                                    """.formatted(token)))
+                            .andReturn()
+                            .getResponse()
+                            .getStatus();
+                }));
+            }
+
+            List<Integer> statuses = new ArrayList<>();
+
+            for (Future<Integer> f : results) {
+                statuses.add(f.get());
+            }
+
+            assertThat(statuses).containsExactlyInAnyOrder(200, 400, 400, 400);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     @Test

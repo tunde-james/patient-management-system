@@ -36,6 +36,11 @@ public class AdminBootstrapRunner implements ApplicationRunner {
             return;
         }
 
+        if (userService.findByEmail(props.email()).isPresent()) {
+            authAudit.log("admin_bootstrap_skipped", props.email(), "email_already_registered", "failure");
+            return;
+        }
+
         User admin = userService.create(props.email(), props.password(), ADMIN_ROLE);
 
         authAudit.log("admin_bootstrapped", admin.getId(), "env_configured", "success");

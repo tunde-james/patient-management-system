@@ -14,13 +14,18 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.devtunde.authservice.exception.InvalidAccessTokenException;
 import com.devtunde.authservice.service.JwtService;
 import com.devtunde.authservice.service.RefreshTokenService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.JwtException;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
@@ -53,8 +58,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             .setAuthentication(new UsernamePasswordAuthenticationToken(
                                     jws.getPayload().getSubject(), null, authorities));
                 }
-            } catch (JwtException | IllegalArgumentException ignored) {
-
+            } catch (InvalidAccessTokenException ex) {
+                SecurityContextHolder.clearContext();
+                logger.debug("Rejected bearer token: " + ex.getMessage());
             }
         }
 

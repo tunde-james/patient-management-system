@@ -9,9 +9,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import jakarta.servlet.http.Cookie;
 
@@ -22,6 +27,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
@@ -51,6 +57,7 @@ import tools.jackson.databind.node.ObjectNode;
 @Testcontainers
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 @TestPropertySource(properties = {"auth.refresh.rolling-ttl=30s", "auth.refresh.absolute-ttl=60s"})
 class RefreshTokenLifecycleTest {
 
@@ -283,6 +290,56 @@ class RefreshTokenLifecycleTest {
             } finally {
 
                 auditLogger.detachAppender(appender);
+            }
+        }
+
+        @Test
+        @DisplayName("two concurrent rotations of the same token: exactly one wins, then the family is dead")
+        void concurrentRotation_exactlyOneWinner() throws Exception {
+            String email = uniqueEmail();
+            seedUser(email, "correct-horse-battery");
+            String token = loginAndGetCookies(email, "correct-horse-battery")[1];
+
+            CyclicBarrier barrier = new CyclicBarrier(2);
+            ExecutorService pool = Executors.newFixedThreadPool(2);
+            try {
+                List<Future<MvcResult>> results = new ArrayList<>();
+                for (int i = 0; i < 2; i++) {
+                    results.add(pool.submit(() -> {
+                        barrier.await();
+                        return postTo(REFRESH, """
+                                   {
+                                        "refreshToken": "%s"
+                                   }
+                                """.formatted(token)).andReturn();
+                    }));
+                }
+
+                List<MvcResult> done = new ArrayList<>();
+                for (Future<MvcResult> f : results) {
+                    done.add(f.get());
+                }
+
+                List<Integer> statuses =
+                        done.stream().map(r -> r.getResponse().getStatus()).toList();
+
+                assertThat(statuses).containsExactlyInAnyOrder(200, 401);
+
+                String winnerBody = done.stream()
+                        .filter(r -> r.getResponse().getStatus() == 200)
+                        .findFirst()
+                        .orElseThrow()
+                        .getResponse()
+                        .getContentAsString();
+                String winnerToken = JsonMapper.shared()
+                        .readTree(winnerBody.getBytes(StandardCharsets.UTF_8))
+                        .get("refresh_token")
+                        .asString();
+
+                // the loser's revocation killed the family: even the winner's fresh token is now dead
+                refreshWithBody(winnerToken).andExpect(status().isUnauthorized());
+            } finally {
+                pool.shutdownNow();
             }
         }
     }

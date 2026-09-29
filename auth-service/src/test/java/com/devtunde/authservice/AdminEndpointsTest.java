@@ -1,6 +1,7 @@
 package com.devtunde.authservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -16,9 +17,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +43,7 @@ import com.redis.testcontainers.RedisContainer;
 @Testcontainers
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 class AdminEndpointsTest {
 
     private static final String ADMIN_USERS = "/api/v1/admin/users";
@@ -78,6 +82,35 @@ class AdminEndpointsTest {
     private MockHttpServletRequestBuilder withAdmin(MockHttpServletRequestBuilder builder) {
 
         return builder.header("Authorization", "Bearer " + adminToken);
+    }
+
+    @Test
+    @DisplayName("create's Location resolves: GET by id -> 200 + email; unknown id -> 404")
+    void getUserById_locationResolves() throws Exception {
+        String email = "clerk-" + UUID.randomUUID() + "@example.com";
+
+        MvcResult result = mockMvc.perform(withAdmin(post(ADMIN_USERS)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                   {
+                                       "email":"%s",
+                                       "password":"ClerkPass123",
+                                       "role":"ROLE_USER"
+                                   }
+                                """.formatted(email))))
+                .andReturn();
+
+        assertThat(result.getResponse().getStatus()).isEqualTo(201);
+
+        User created = userService.findByEmail(email).orElseThrow();
+
+        assertThat(result.getResponse().getHeader("Location")).isEqualTo(ADMIN_USERS + "/" + created.getId());
+
+        mockMvc.perform(withAdmin(get(ADMIN_USERS + "/" + created.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(email));
+
+        mockMvc.perform(withAdmin(get(ADMIN_USERS + "/" + UUID.randomUUID()))).andExpect(status().isNotFound());
     }
 
     @Test

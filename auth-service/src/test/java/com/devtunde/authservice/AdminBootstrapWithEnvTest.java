@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 import org.junit.jupiter.api.DisplayName;
@@ -23,6 +24,7 @@ import com.devtunde.authservice.service.AdminBootstrapRunner;
 
 @Testcontainers
 @SpringBootTest
+@ActiveProfiles("test") 
 @TestPropertySource(
         properties = {"auth.admin.email=admin-bootstrap@example.com", "auth.admin.password=BootstrapPass123"})
 class AdminBootstrapWithEnvTest {

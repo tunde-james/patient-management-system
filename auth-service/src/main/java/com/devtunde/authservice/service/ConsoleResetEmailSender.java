@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 import com.devtunde.authservice.config.ResetProperties;
 
 @Component
-@Profile({"dev", "test", "default"})
+@Profile({"dev", "test"})
 public class ConsoleResetEmailSender implements ResetEmailSender {
 
     private static final Logger log = LoggerFactory.getLogger(ConsoleResetEmailSender.class);
