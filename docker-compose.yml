@@ -114,7 +114,7 @@ services:
     networks:
       - internal
     depends_on:
-      auth-service-db:
+      patient-service-db:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:4000/actuator/health || exit 1"]
@@ -187,7 +187,7 @@ services:
     networks:
       - internal
     depends_on:
-      patient-service-db:
+      auth-service-db:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:4003/actuator/health || exit 1"]

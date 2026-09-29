@@ -5,7 +5,7 @@ spring:
     ansi:
       enabled: ALWAYS
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localho}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/analytics_db}
     username: ${SPRING_DATASOURCE_USERNAME:analytics_user}
     password: ${SPRING_DATASOURCE_PASSWORD:password}
   jpa:
