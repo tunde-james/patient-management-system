@@ -21,7 +21,8 @@ import com.devtunde.authservice.web.ProblemJsonSecurityHandler;
     RefreshProperties.class,
     AdminBootstrapProperties.class,
     ResetProperties.class,
-    BreachedPasswordProperties.class
+    BreachedPasswordProperties.class,
+    CookieProperties.class
 })
 public class SecurityConfig {
 

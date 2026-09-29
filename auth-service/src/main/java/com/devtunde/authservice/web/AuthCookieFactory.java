@@ -3,6 +3,7 @@ package com.devtunde.authservice.web;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
+import com.devtunde.authservice.config.CookieProperties;
 import com.devtunde.authservice.config.RefreshProperties;
 import com.devtunde.authservice.service.JwtService;
 
@@ -14,17 +15,19 @@ public class AuthCookieFactory {
 
     private final JwtService jwtService;
     private final RefreshProperties refreshProperties;
+    private final CookieProperties cookie;
 
-    public AuthCookieFactory(JwtService jwtService, RefreshProperties refreshProperties) {
+    public AuthCookieFactory(JwtService jwtService, RefreshProperties refreshProperties, CookieProperties cookie) {
         this.jwtService = jwtService;
         this.refreshProperties = refreshProperties;
+        this.cookie = cookie;
     }
 
     public ResponseCookie access(String token) {
 
         return ResponseCookie.from(ACCESS_COOKIE, token)
                 .httpOnly(true)
-                .secure(true)
+                .secure(cookie.secure())
                 .sameSite("Lax")
                 .path("/")
                 .maxAge(jwtService.accessTokenTtlSeconds())
@@ -35,7 +38,7 @@ public class AuthCookieFactory {
 
         return ResponseCookie.from(REFRESH_COOKIE, token)
                 .httpOnly(true)
-                .secure(true)
+                .secure(cookie.secure())
                 .sameSite("Lax")
                 .path("/api/v1/auth/refresh")
                 .maxAge(refreshProperties.rollingTtl())
@@ -46,18 +49,18 @@ public class AuthCookieFactory {
 
         return ResponseCookie.from(ACCESS_COOKIE, "")
                 .httpOnly(true)
-                .secure(true)
+                .secure(cookie.secure())
                 .sameSite("Lax")
                 .path("/")
                 .maxAge(0)
                 .build();
     }
 
-     public ResponseCookie clearedRefresh() {
+    public ResponseCookie clearedRefresh() {
 
         return ResponseCookie.from(REFRESH_COOKIE, "")
                 .httpOnly(true)
-                .secure(true)
+                .secure(cookie.secure())
                 .sameSite("Lax")
                 .path("/api/v1/auth/refresh")
                 .maxAge(0)

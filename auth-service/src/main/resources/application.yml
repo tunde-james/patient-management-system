@@ -27,6 +27,9 @@ auth:
       base-url: ${HIBP_BASE_URL:https://api.pwnedpasswords.com}
   jwt:
     access-token-ttl: 15m
+    private-key: ${AUTH_JWT_PRIVATE_KEY:}
+  cookie:
+    secure: ${AUTH_COOKIE_SECURE:true}
   refresh:
     rolling-ttl: 7d
     absolute-ttl: 30d

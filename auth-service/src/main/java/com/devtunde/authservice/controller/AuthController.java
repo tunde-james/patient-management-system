@@ -1,7 +1,6 @@
 package com.devtunde.authservice.controller;
 
 import java.net.URI;
-import java.time.Duration;
 
 import jakarta.validation.Valid;
 
@@ -15,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.devtunde.authservice.config.RefreshProperties;
 import com.devtunde.authservice.dto.ForgotPasswordReqDto;
 import com.devtunde.authservice.dto.LoginReqDto;
 import com.devtunde.authservice.dto.LoginResDto;
@@ -44,7 +42,6 @@ public class AuthController {
     private final AuthService authService;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
-    private final RefreshProperties refreshProperties;
     private final AuthCookieFactory authCookies;
     private final PasswordResetService passwordResetService;
 
@@ -52,13 +49,11 @@ public class AuthController {
             AuthService authService,
             JwtService jwtService,
             RefreshTokenService refreshTokenService,
-            RefreshProperties refreshProperties,
             AuthCookieFactory authCookies,
             PasswordResetService passwordResetService) {
         this.authService = authService;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
-        this.refreshProperties = refreshProperties;
         this.authCookies = authCookies;
         this.passwordResetService = passwordResetService;
     }
@@ -79,21 +74,8 @@ public class AuthController {
         String token = jwtService.issue(user);
         String refresToken = refreshTokenService.issue(user);
 
-        ResponseCookie accessCookie = ResponseCookie.from(AuthCookieFactory.ACCESS_COOKIE, token)
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("Lax")
-                .path("/")
-                .maxAge(Duration.ofSeconds(jwtService.accessTokenTtlSeconds()))
-                .build();
-
-        ResponseCookie refreshCookie = ResponseCookie.from(AuthCookieFactory.REFRESH_COOKIE, refresToken)
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("Lax")
-                .path("/api/v1/auth/refresh")
-                .maxAge(refreshProperties.rollingTtl())
-                .build();
+        ResponseCookie accessCookie = authCookies.access(token);
+        ResponseCookie refreshCookie = authCookies.refresh(refresToken);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, accessCookie.toString(), refreshCookie.toString())
@@ -119,23 +101,8 @@ public class AuthController {
 
             RefreshTokenService.Rotation rotation = refreshTokenService.rotate(cookieToken);
 
-            ResponseCookie accessCookie = ResponseCookie.from(
-                            AuthCookieFactory.ACCESS_COOKIE, jwtService.issue(rotation.user()))
-                    .httpOnly(true)
-                    .secure(true)
-                    .sameSite("Lax")
-                    .path("/")
-                    .maxAge(Duration.ofSeconds(jwtService.accessTokenTtlSeconds()))
-                    .build();
-
-            ResponseCookie refreshCookie = ResponseCookie.from(
-                            AuthCookieFactory.REFRESH_COOKIE, rotation.refreshToken())
-                    .httpOnly(true)
-                    .secure(true)
-                    .sameSite("Lax")
-                    .path("/api/v1/auth/refresh")
-                    .maxAge(refreshProperties.rollingTtl())
-                    .build();
+            ResponseCookie accessCookie = authCookies.access(jwtService.issue(rotation.user()));
+            ResponseCookie refreshCookie = authCookies.refresh(rotation.refreshToken());
 
             return ResponseEntity.noContent()
                     .header(HttpHeaders.SET_COOKIE, accessCookie.toString(), refreshCookie.toString())

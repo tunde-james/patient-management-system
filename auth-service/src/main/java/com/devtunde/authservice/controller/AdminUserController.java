@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -38,13 +39,21 @@ public class AdminUserController {
         this.authAudit = authAudit;
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<RegisterResDto> getUser(@PathVariable UUID id) {
+
+        User user = userService.findById(id).orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        return ResponseEntity.ok(UserMapper.toDTO(user));
+    }
+
     @PostMapping
     public ResponseEntity<RegisterResDto> createUser(@Valid @RequestBody AdminCreateUserReqDto reqDto) {
 
         User created = userService.create(reqDto.email(), reqDto.password(), reqDto.role());
         authAudit.log("admin_created_user", callerId(), "role=" + reqDto.role(), "success");
 
-        return ResponseEntity.created(URI.create("/api/v1/users/" + created.getId()))
+        return ResponseEntity.created(URI.create("/api/v1/admin/users/" + created.getId()))
                 .body(UserMapper.toDTO(created));
     }
 
